@@ -85,6 +85,9 @@ public static class Perfis
                 estado.Recuperacao = RecoveryMode.None;
                 estado.DesligarDefender = true;
                 estado.CompactarWindows = true;
+                estado.Efeitos = ModoEfeitos.Desempenho;
+                estado.Energia = PlanoEnergia.AltoDesempenho;
+                estado.RemoverEdge = true;
             }),
     ];
 }

@@ -101,7 +101,7 @@ public class CatalogoTests
     [Fact]
     public void Conta_local_sem_tela_de_rede_pula_as_duas_telas()
     {
-        var gerado = Gerar(new EstadoVega { Conta = TipoConta.Local, MostrarTelaWifi = false });
+        var gerado = Gerar(new EstadoVega { Conta = TipoConta.Local, Wifi = ModoWifi.Pular });
 
         Assert.Contains("<HideOnlineAccountScreens>true</HideOnlineAccountScreens>", gerado);
         Assert.Contains("<HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>", gerado);

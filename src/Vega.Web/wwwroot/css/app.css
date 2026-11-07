@@ -100,6 +100,23 @@ h1, h2, h3 { line-height: 1.2; font-weight: 600; }
 .campo-texto { grid-template-columns: minmax(0, 1fr); }
 .campo-texto textarea { width: 100%; margin-top: 8px; padding: 10px 12px; border-radius: 9px; border: 1px solid var(--line); background: var(--pop); font: 13px/1.5 "Cascadia Code", Consolas, monospace; resize: vertical; }
 
+.campo input[type="color"] { padding: 3px; cursor: pointer; }
+
+.bloco { display: grid; gap: 10px; padding: 14px 16px; border-radius: 12px; background: var(--alt); }
+.bloco-topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.bloco-topo strong { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.bloco-grade { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.mini-campo { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+.mini-campo input, .mini-campo select { width: 100%; height: 36px; padding: 0 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--pop); color: var(--ink); font-size: 14px; }
+.bloco textarea { width: 100%; padding: 10px 12px; border-radius: 9px; border: 1px solid var(--line); background: var(--pop); font: 13px/1.5 "Cascadia Code", Consolas, monospace; resize: vertical; }
+.botao-mini:disabled { opacity: .5; cursor: not-allowed; }
+.atalho { display: block; width: 100%; padding: 14px 16px; border-radius: 12px; background: var(--alt); text-align: left; border: 1px solid transparent; }
+.atalho:hover { border-color: var(--line); }
+.atalho span { display: block; font-size: 14px; color: var(--muted); }
+.arquivo-config { position: relative; cursor: pointer; }
+.arquivo-config input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.arquivo-config:focus-within { outline: 2px solid var(--ink); outline-offset: 2px; }
+
 .opcao.desativada { cursor: default; }
 .opcao.desativada:hover { border-color: transparent; }
 .opcao.desativada .opcao-titulo, .opcao.desativada .opcao-descricao { opacity: .62; }
@@ -147,6 +164,7 @@ pre { margin: 0; padding: 16px 18px; overflow: auto; font: 13px/1.5 "Cascadia Co
   .categoria { flex: none; width: auto; background: var(--alt); }
   .campo { grid-template-columns: minmax(0, 1fr); }
   .campo select, .campo input { grid-column: 1; grid-row: auto; margin-top: 6px; }
+  .bloco-grade { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 520px) {
   .capsula-info { display: none; }

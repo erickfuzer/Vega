@@ -1,0 +1,15 @@
+<label class="campo @(Largo ? "campo-texto" : "")">
+    <span class="campo-titulo">@Titulo</span>
+    @if (Descricao is not null)
+    {
+        <span class="campo-descricao">@Descricao</span>
+    }
+    @ChildContent
+</label>
+
+@code {
+    [Parameter, EditorRequired] public string Titulo { get; set; } = "";
+    [Parameter] public string? Descricao { get; set; }
+    [Parameter] public bool Largo { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

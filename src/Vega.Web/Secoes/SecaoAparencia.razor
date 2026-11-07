@@ -1,0 +1,127 @@
+<p class="secao-sub">Cores, imagens e o que aparece no Menu Iniciar, na barra e na área de trabalho.</p>
+
+<h3 class="grupo-titulo">Cores</h3>
+<div class="lista">
+    <Interruptor Titulo="Personalizar as cores" Descricao="Define tema e cor de destaque para os novos usuários." @bind-Valor="Estado.PersonalizarCores" @bind-Valor:after="Mudou" />
+    @if (Estado.PersonalizarCores)
+    {
+        <Campo Titulo="Tema do Windows">
+            <select @bind="Estado.TemaSistema" @bind:after="Mudou"><option value="@ColorTheme.Dark">Escuro</option><option value="@ColorTheme.Light">Claro</option></select>
+        </Campo>
+        <Campo Titulo="Tema dos apps">
+            <select @bind="Estado.TemaApps" @bind:after="Mudou"><option value="@ColorTheme.Dark">Escuro</option><option value="@ColorTheme.Light">Claro</option></select>
+        </Campo>
+        <Campo Titulo="Cor de destaque">
+            <input type="color" @bind="Estado.CorDestaque" @bind:after="Mudou" />
+        </Campo>
+        <Interruptor Titulo="Efeitos de transparência" @bind-Valor="Estado.Transparencia" @bind-Valor:after="Mudou" />
+        <Interruptor Titulo="Cor de destaque no Iniciar e na barra" @bind-Valor="Estado.CorNoIniciar" @bind-Valor:after="Mudou" />
+        <Interruptor Titulo="Cor de destaque nas bordas das janelas" @bind-Valor="Estado.CorNasBordas" @bind-Valor:after="Mudou" />
+    }
+</div>
+
+<h3 class="grupo-titulo">Imagens</h3>
+<div class="lista">
+    <Campo Titulo="Papel de parede">
+        <select @bind="Estado.Papel" @bind:after="Mudou">
+            <option value="@ModoPapel.Padrao">Padrão do Windows</option>
+            <option value="@ModoPapel.CorSolida">Cor sólida</option>
+            <option value="@ModoPapel.Script">Imagem por script</option>
+        </select>
+    </Campo>
+    @if (Estado.Papel == ModoPapel.CorSolida)
+    {
+        <Campo Titulo="Cor do fundo">
+            <input type="color" @bind="Estado.CorPapel" @bind:after="Mudou" />
+        </Campo>
+    }
+    else if (Estado.Papel == ModoPapel.Script)
+    {
+        <Campo Titulo="Script que devolve a imagem (PowerShell)" Descricao="Deve devolver os bytes da imagem. Roda antes da criação dos usuários." Largo="true">
+            <textarea rows="5" spellcheck="false" @bind="Estado.ScriptPapel" @bind:after="Mudou"></textarea>
+        </Campo>
+    }
+    <Interruptor Titulo="Personalizar a tela de bloqueio" @bind-Valor="Estado.PersonalizarTelaBloqueio" @bind-Valor:after="Mudou" />
+    @if (Estado.PersonalizarTelaBloqueio)
+    {
+        <Campo Titulo="Script que devolve a imagem (PowerShell)" Descricao="Deve devolver os bytes da imagem." Largo="true">
+            <textarea rows="5" spellcheck="false" @bind="Estado.ScriptTelaBloqueio" @bind:after="Mudou"></textarea>
+        </Campo>
+    }
+</div>
+
+<h3 class="grupo-titulo">Menu Iniciar</h3>
+<div class="lista">
+    <Campo Titulo="Fixados no Iniciar (Windows 11)" Descricao="Vazio deixa o Iniciar sem nenhum app fixado.">
+        <select @bind="Estado.FixadosIniciar" @bind:after="Mudou">
+            <option value="@ModoFixados.Padrao">Padrão do Windows</option>
+            <option value="@ModoFixados.Vazio">Vazio</option>
+            <option value="@ModoFixados.Personalizado">Personalizado (JSON)</option>
+        </select>
+    </Campo>
+    @if (Estado.FixadosIniciar == ModoFixados.Personalizado)
+    {
+        <Campo Titulo="Lista de fixados (JSON)" Descricao="O formato da política ConfigureStartPins." Largo="true">
+            <textarea rows="6" spellcheck="false" @bind="Estado.FixadosIniciarJson" @bind:after="Mudou"></textarea>
+        </Campo>
+    }
+    <Campo Titulo="Blocos do Iniciar (Windows 10)">
+        <select @bind="Estado.BlocosIniciar" @bind:after="Mudou">
+            <option value="@ModoFixados.Padrao">Padrão do Windows</option>
+            <option value="@ModoFixados.Vazio">Vazio</option>
+            <option value="@ModoFixados.Personalizado">Personalizado (XML)</option>
+        </select>
+    </Campo>
+    @if (Estado.BlocosIniciar == ModoFixados.Personalizado)
+    {
+        <Campo Titulo="Layout dos blocos (XML)" Largo="true">
+            <textarea rows="6" spellcheck="false" @bind="Estado.BlocosIniciarXml" @bind:after="Mudou"></textarea>
+        </Campo>
+    }
+    <Interruptor Titulo="Escolher as pastas ao lado do botão de energia" @bind-Valor="Estado.PersonalizarPastasIniciar" @bind-Valor:after="Mudou" />
+    @if (Estado.PersonalizarPastasIniciar)
+    {
+        @foreach (var (id, nome) in Catalogo.NomesPastasIniciar)
+        {
+            <Interruptor Titulo="@nome" Valor="Estado.PastasIniciar.Contains(id)" ValorChanged="v => Alternar(Estado.PastasIniciar, id, v)" />
+        }
+    }
+</div>
+
+<h3 class="grupo-titulo">Barra de tarefas e área de trabalho</h3>
+<div class="lista">
+    <Campo Titulo="Ícones fixados na barra" Descricao="Vazio não deixa nenhum ícone fixado no primeiro login.">
+        <select @bind="Estado.IconesBarra" @bind:after="Mudou">
+            <option value="@ModoFixados.Padrao">Padrão do Windows</option>
+            <option value="@ModoFixados.Vazio">Vazio</option>
+            <option value="@ModoFixados.Personalizado">Personalizado (XML)</option>
+        </select>
+    </Campo>
+    @if (Estado.IconesBarra == ModoFixados.Personalizado)
+    {
+        <Campo Titulo="Layout da barra (XML)" Largo="true">
+            <textarea rows="6" spellcheck="false" @bind="Estado.IconesBarraXml" @bind:after="Mudou"></textarea>
+        </Campo>
+    }
+    <Interruptor Titulo="Escolher os ícones da área de trabalho" @bind-Valor="Estado.PersonalizarIconesArea" @bind-Valor:after="Mudou" />
+    @if (Estado.PersonalizarIconesArea)
+    {
+        @foreach (var (id, nome) in Catalogo.NomesIconesArea)
+        {
+            <Interruptor Titulo="@nome" Valor="Estado.IconesArea.Contains(id)" ValorChanged="v => Alternar(Estado.IconesArea, id, v)" />
+        }
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public EstadoVega Estado { get; set; } = default!;
+    [Parameter] public EventCallback AoMudar { get; set; }
+
+    private Task Mudou() => AoMudar.InvokeAsync();
+
+    private Task Alternar(HashSet<string> conjunto, string id, bool ligado)
+    {
+        if (ligado) conjunto.Add(id); else conjunto.Remove(id);
+        return Mudou();
+    }
+}

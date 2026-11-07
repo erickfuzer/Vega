@@ -1,0 +1,46 @@
+<div class="lista">
+    <Campo Titulo="Efeitos visuais" Descricao="Melhor desempenho desliga animações, sombras e a suavização de fontes.">
+        <select @bind="Estado.Efeitos" @bind:after="Mudou">
+            <option value="@ModoEfeitos.Padrao">Padrão do Windows</option>
+            <option value="@ModoEfeitos.Desempenho">Melhor desempenho</option>
+            <option value="@ModoEfeitos.Aparencia">Melhor aparência</option>
+            <option value="@ModoEfeitos.Personalizado">Personalizado</option>
+        </select>
+    </Campo>
+    @if (Estado.Efeitos == ModoEfeitos.Desempenho)
+    {
+        <p class="alerta atencao">O texto pode ficar menos nítido sem a suavização de fontes. Em computadores recentes, o ganho costuma ser pequeno.</p>
+    }
+    else if (Estado.Efeitos == ModoEfeitos.Personalizado)
+    {
+        @foreach (var (efeito, nome) in Catalogo.NomesEfeitos)
+        {
+            <Interruptor Titulo="@nome" Valor="Estado.EfeitosLigados.Contains(efeito)" ValorChanged="v => AlternarEfeito(efeito, v)" />
+        }
+    }
+
+    <Campo Titulo="Plano de energia" Descricao="Aplicado no primeiro login. Desempenho Máximo não existe em todos os computadores, e nesse caso usa Alto Desempenho.">
+        <select @bind="Estado.Energia" @bind:after="Mudou">
+            <option value="@PlanoEnergia.Padrao">Padrão do Windows (Equilibrado)</option>
+            <option value="@PlanoEnergia.AltoDesempenho">Alto Desempenho</option>
+            <option value="@PlanoEnergia.DesempenhoMaximo">Desempenho Máximo</option>
+        </select>
+    </Campo>
+    @if (Estado.Energia != PlanoEnergia.Padrao)
+    {
+        <p class="alerta atencao">Gasta mais energia e esquenta mais. Em notebooks, a bateria dura menos.</p>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public EstadoVega Estado { get; set; } = default!;
+    [Parameter] public EventCallback AoMudar { get; set; }
+
+    private Task Mudou() => AoMudar.InvokeAsync();
+
+    private Task AlternarEfeito(Effect efeito, bool ligado)
+    {
+        if (ligado) Estado.EfeitosLigados.Add(efeito); else Estado.EfeitosLigados.Remove(efeito);
+        return Mudou();
+    }
+}

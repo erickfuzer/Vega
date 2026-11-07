@@ -8,9 +8,10 @@
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 
-  <!-- O gerador le JSON por reflexao com Newtonsoft.Json, entao essas bibliotecas nao podem ser cortadas. -->
+  <!-- O gerador e o salvar/abrir configuracao usam JSON por reflexao com Newtonsoft.Json, entao essas bibliotecas nao podem ser cortadas. -->
   <ItemGroup>
     <TrimmerRootAssembly Include="UnattendGenerator" />
+    <TrimmerRootAssembly Include="Vega.Core" />
     <TrimmerRootAssembly Include="Newtonsoft.Json" />
     <TrimmerRootAssembly Include="System.Collections.Immutable" />
   </ItemGroup>

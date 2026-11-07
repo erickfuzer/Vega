@@ -1,0 +1,190 @@
+<h3 class="grupo-titulo">Conta</h3>
+<div class="lista">
+    <Campo Titulo="Tipo de conta" Descricao="A conta local pede usuário e senha na hora. A conta pronta já vem criada no XML.">
+        <select @bind="Estado.Conta" @bind:after="Mudou">
+            <option value="@TipoConta.Local">Conta local, criada na hora</option>
+            <option value="@TipoConta.Microsoft">Conta Microsoft</option>
+            <option value="@TipoConta.Pronta">Contas prontas no XML</option>
+        </select>
+    </Campo>
+
+    @if (Estado.Conta == TipoConta.Pronta)
+    {
+        <p class="alerta atencao">As senhas ficam dentro do XML. Não compartilhe o arquivo se usar senhas reais.</p>
+
+        @foreach (var conta in Estado.Contas)
+        {
+            <div class="bloco">
+                <div class="bloco-topo">
+                    <strong>@(string.IsNullOrEmpty(conta.Nome) ? "Nova conta" : conta.Nome)</strong>
+                    <button type="button" class="botao-mini" @onclick="() => RemoverConta(conta)">Remover</button>
+                </div>
+                <div class="bloco-grade">
+                    <label class="mini-campo">Usuário <input type="text" spellcheck="false" maxlength="20" @bind="conta.Nome" @bind:after="Mudou" /></label>
+                    <label class="mini-campo">Nome exibido <input type="text" @bind="conta.NomeExibido" @bind:after="Mudou" /></label>
+                    <label class="mini-campo">Senha <input type="password" autocomplete="new-password" @bind="conta.Senha" @bind:after="Mudou" /></label>
+                    <label class="mini-campo">Grupo
+                        <select @bind="conta.Grupo" @bind:after="Mudou">
+                            <option value="@Constants.AdministratorsGroup">Administradores</option>
+                            <option value="@Constants.UsersGroup">Usuários</option>
+                        </select>
+                    </label>
+                </div>
+            </div>
+        }
+        <div class="acoes-lista">
+            <button type="button" class="botao-mini" disabled="@(Estado.Contas.Count >= MaximoContas)" @onclick="AdicionarConta">Adicionar conta</button>
+        </div>
+
+        <Campo Titulo="Login automático" Descricao="Sem login automático, a instalação para na tela de login e os arquivos de instalação precisam ser mantidos.">
+            <select @bind="Estado.Login" @bind:after="Mudou">
+                <option value="@LoginAutomatico.PrimeiraConta">Entrar com a primeira conta de administrador</option>
+                <option value="@LoginAutomatico.Administrador">Entrar com a conta Administrador interna</option>
+                <option value="@LoginAutomatico.Nenhum">Não entrar sozinho</option>
+            </select>
+        </Campo>
+        @if (Estado.Login == LoginAutomatico.Administrador)
+        {
+            <Campo Titulo="Senha da conta Administrador">
+                <input type="password" autocomplete="new-password" @bind="Estado.SenhaAdministrador" @bind:after="Mudou" />
+            </Campo>
+        }
+        <Interruptor Titulo="Disfarçar as senhas no XML" Descricao="Grava as senhas em Base64. Dificulta a leitura à primeira vista, mas não é criptografia." @bind-Valor="Estado.OcultarSenhas" @bind-Valor:after="Mudou" />
+    }
+
+    <Campo Titulo="Expiração de senha" Descricao="@($"O padrão do Windows é {DefaultPasswordExpirationSettings.MaxAge} dias.")">
+        <select @bind="Estado.Expiracao" @bind:after="Mudou">
+            <option value="@ModoExpiracao.Padrao">Padrão do Windows</option>
+            <option value="@ModoExpiracao.Nunca">Nunca expirar</option>
+            <option value="@ModoExpiracao.Personalizado">Personalizado</option>
+        </select>
+    </Campo>
+    @if (Estado.Expiracao == ModoExpiracao.Personalizado)
+    {
+        <Campo Titulo="Dias até expirar" Descricao="De 1 a 999.">
+            <input type="number" min="1" max="999" @bind="Estado.ExpiracaoDias" @bind:after="Mudou" />
+        </Campo>
+    }
+
+    <Campo Titulo="Bloqueio após senhas erradas" Descricao="Protege contra quem tenta adivinhar a senha.">
+        <select @bind="Estado.Bloqueio" @bind:after="Mudou">
+            <option value="@ModoBloqueio.Padrao">Padrão do Windows</option>
+            <option value="@ModoBloqueio.Desligado">Desligado</option>
+            <option value="@ModoBloqueio.Personalizado">Personalizado</option>
+        </select>
+    </Campo>
+    @if (Estado.Bloqueio == ModoBloqueio.Personalizado)
+    {
+        <Campo Titulo="Tentativas antes de bloquear" Descricao="De 0 a 999.">
+            <input type="number" min="0" max="999" @bind="Estado.BloqueioTentativas" @bind:after="Mudou" />
+        </Campo>
+        <Campo Titulo="Tempo de bloqueio (minutos)">
+            <input type="number" min="1" @bind="Estado.BloqueioDuracao" @bind:after="Mudou" />
+        </Campo>
+        <Campo Titulo="Zerar a contagem depois de (minutos)">
+            <input type="number" min="1" @bind="Estado.BloqueioJanela" @bind:after="Mudou" />
+        </Campo>
+    }
+</div>
+
+<h3 class="grupo-titulo">Computador</h3>
+<div class="lista">
+    <Campo Titulo="Nome do computador">
+        <select @bind="Estado.NomeComputadorModo" @bind:after="Mudou">
+            <option value="@ModoNomeComputador.Aleatorio">Aleatório</option>
+            <option value="@ModoNomeComputador.Personalizado">Escolher agora</option>
+            <option value="@ModoNomeComputador.Perguntar">Perguntar na instalação</option>
+            <option value="@ModoNomeComputador.Script">Gerar por script</option>
+        </select>
+    </Campo>
+    @if (Estado.NomeComputadorModo == ModoNomeComputador.Personalizado)
+    {
+        <Campo Titulo="Nome" Descricao="Até 15 caracteres, sem espaços.">
+            <input type="text" spellcheck="false" maxlength="15" @bind="Estado.NomeComputador" @bind:after="Mudou" />
+        </Campo>
+    }
+    else if (Estado.NomeComputadorModo == ModoNomeComputador.Script)
+    {
+        <Campo Titulo="Script que devolve o nome (PowerShell)" Largo="true">
+            <textarea rows="5" spellcheck="false" @bind="Estado.ScriptNomeComputador" @bind:after="Mudou"></textarea>
+        </Campo>
+    }
+    <Campo Titulo="Fuso horário" Descricao="Automático usa o do idioma e da região.">
+        <select @bind="Estado.FusoHorario" @bind:after="Mudou">
+            <option value="">Automático</option>
+            @foreach (var item in Gerador.TimeOffsets.Values)
+            {
+                <option value="@item.Id">@item.DisplayName</option>
+            }
+        </select>
+    </Campo>
+    <Campo Titulo="Configurações de privacidade" Descricao="As opções que o Windows pergunta na configuração inicial.">
+        <select @bind="Estado.Privacidade" @bind:after="Mudou">
+            <option value="@ExpressSettingsMode.DisableAll">Desligar todas</option>
+            <option value="@ExpressSettingsMode.Interactive">Perguntar na instalação</option>
+            <option value="@ExpressSettingsMode.EnableAll">Ligar todas</option>
+        </select>
+    </Campo>
+</div>
+
+<h3 class="grupo-titulo">Wi-Fi</h3>
+<div class="lista">
+    <Campo Titulo="Wi-Fi na instalação" Descricao="Pular leva direto à criação da conta. A tela de rede travou em testes em máquina virtual.">
+        <select @bind="Estado.Wifi" @bind:after="Mudou">
+            <option value="@ModoWifi.Pular">Pular a tela, conectar depois</option>
+            <option value="@ModoWifi.Perguntar">Mostrar a tela de rede</option>
+            <option value="@ModoWifi.Configurar">Conectar a uma rede agora</option>
+            <option value="@ModoWifi.ArquivoXml">Usar um perfil em XML</option>
+        </select>
+    </Campo>
+    @if (Estado.Wifi == ModoWifi.Configurar)
+    {
+        <p class="alerta atencao">A senha do Wi-Fi fica dentro do XML. Não compartilhe o arquivo.</p>
+        <Campo Titulo="Nome da rede (SSID)">
+            <input type="text" spellcheck="false" @bind="Estado.WifiNome" @bind:after="Mudou" />
+        </Campo>
+        <Campo Titulo="Segurança">
+            <select @bind="Estado.WifiAutenticacao" @bind:after="Mudou">
+                <option value="@WifiAuthentications.WPA2PSK">WPA2</option>
+                <option value="@WifiAuthentications.WPA3SAE">WPA3</option>
+                <option value="@WifiAuthentications.Open">Aberta, sem senha</option>
+            </select>
+        </Campo>
+        @if (Estado.WifiAutenticacao != WifiAuthentications.Open)
+        {
+            <Campo Titulo="Senha da rede">
+                <input type="password" autocomplete="new-password" @bind="Estado.WifiSenha" @bind:after="Mudou" />
+            </Campo>
+        }
+        <Interruptor Titulo="Conectar automaticamente" @bind-Valor="Estado.WifiConectarSozinho" @bind-Valor:after="Mudou" />
+        <Interruptor Titulo="Rede oculta" Descricao="Marque se a rede não aparece na lista." @bind-Valor="Estado.WifiOculta" @bind-Valor:after="Mudou" />
+    }
+    else if (Estado.Wifi == ModoWifi.ArquivoXml)
+    {
+        <Campo Titulo="Perfil de Wi-Fi (XML)" Descricao="Gerado com netsh wlan export profile." Largo="true">
+            <textarea rows="8" spellcheck="false" @bind="Estado.WifiXml" @bind:after="Mudou"></textarea>
+        </Campo>
+    }
+</div>
+
+@code {
+    private const int MaximoContas = 15;
+
+    [Parameter, EditorRequired] public EstadoVega Estado { get; set; } = default!;
+    [Parameter, EditorRequired] public UnattendGenerator Gerador { get; set; } = default!;
+    [Parameter] public EventCallback AoMudar { get; set; }
+
+    private Task Mudou() => AoMudar.InvokeAsync();
+
+    private Task AdicionarConta()
+    {
+        Estado.Contas.Add(new ContaPronta());
+        return Mudou();
+    }
+
+    private Task RemoverConta(ContaPronta conta)
+    {
+        Estado.Contas.Remove(conta);
+        return Mudou();
+    }
+}

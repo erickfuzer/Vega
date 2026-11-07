@@ -1,0 +1,160 @@
+@using System.Text
+@using Microsoft.AspNetCore.Components.Forms
+@using Newtonsoft.Json
+@inject IJSRuntime JS
+
+<h3 class="grupo-titulo">Scripts próprios</h3>
+<p class="secao-sub">Rodam na ordem da lista. O que é arriscado funciona melhor no primeiro login, porque mudanças antes da configuração inicial podem travar a instalação.</p>
+<div class="lista">
+    @foreach (var script in Estado.Scripts)
+    {
+        <div class="bloco">
+            <div class="bloco-topo">
+                <strong>Script @(Estado.Scripts.IndexOf(script) + 1)</strong>
+                <button type="button" class="botao-mini" @onclick="() => RemoverScript(script)">Remover</button>
+            </div>
+            <div class="bloco-grade">
+                <label class="mini-campo">Quando rodar
+                    <select @bind="script.Fase" @bind:after="Mudou">
+                        <option value="@ScriptPhase.System">Sistema, antes de criar os usuários</option>
+                        <option value="@ScriptPhase.DefaultUser">Registro do usuário padrão</option>
+                        <option value="@ScriptPhase.FirstLogon">Primeiro login, como administrador</option>
+                        <option value="@ScriptPhase.UserOnce">Primeiro login de cada usuário</option>
+                    </select>
+                </label>
+                <label class="mini-campo">Tipo
+                    <select @bind="script.Tipo" @bind:after="Mudou">
+                        <option value="@ScriptType.Ps1">PowerShell (.ps1)</option>
+                        <option value="@ScriptType.Cmd">Prompt de comando (.cmd)</option>
+                        <option value="@ScriptType.Reg">Registro (.reg)</option>
+                        @if (script.Fase != ScriptPhase.DefaultUser)
+                        {
+                            <option value="@ScriptType.Vbs">VBScript (.vbs)</option>
+                        }
+                    </select>
+                </label>
+            </div>
+            <textarea rows="6" spellcheck="false" aria-label="Conteúdo do script" @bind="script.Conteudo" @bind:after="Mudou"></textarea>
+        </div>
+    }
+    <div class="acoes-lista">
+        <button type="button" class="botao-mini" @onclick="AdicionarScript">Adicionar script</button>
+    </div>
+    <Interruptor Titulo="Reiniciar o Explorador ao terminar" Descricao="Aplica na hora os ajustes que dependem dele." @bind-Valor="Estado.ReiniciarExplorador" @bind-Valor:after="Mudou" />
+</div>
+
+<h3 class="grupo-titulo">Componentes XML</h3>
+<p class="secao-sub">Adiciona configurações do Windows que o Vega não oferece. Veja os nomes na documentação da Microsoft.</p>
+<div class="lista">
+    @foreach (var componente in Estado.Componentes)
+    {
+        var fases = FasesDe(componente);
+        <div class="bloco">
+            <div class="bloco-topo">
+                <strong>@(string.IsNullOrEmpty(componente.Componente) ? "Novo componente" : componente.Componente)</strong>
+                <button type="button" class="botao-mini" @onclick="() => RemoverComponente(componente)">Remover</button>
+            </div>
+            <div class="bloco-grade">
+                <label class="mini-campo">Componente
+                    <select @bind="componente.Componente" @bind:after="Mudou">
+                        @foreach (var item in Gerador.Components.Values.OrderBy(c => c.Id))
+                        {
+                            <option value="@item.Id">@item.Id</option>
+                        }
+                    </select>
+                </label>
+                <label class="mini-campo">Etapa
+                    <select @bind="componente.Fase" @bind:after="Mudou">
+                        @foreach (var fase in fases)
+                        {
+                            <option value="@fase">@fase</option>
+                        }
+                    </select>
+                </label>
+            </div>
+            <textarea rows="5" spellcheck="false" aria-label="XML do componente" @bind="componente.Xml" @bind:after="Mudou"></textarea>
+        </div>
+    }
+    <div class="acoes-lista">
+        <button type="button" class="botao-mini" @onclick="AdicionarComponente">Adicionar componente</button>
+    </div>
+</div>
+
+<h3 class="grupo-titulo">Salvar e abrir configuração</h3>
+<p class="secao-sub">Guarde o que você marcou em um arquivo para usar depois. O arquivo inclui as senhas e chaves digitadas, então cuidado ao compartilhar.</p>
+<div class="acoes-lista">
+    <button type="button" class="botao-mini" @onclick="SalvarConfiguracao">Salvar configuração</button>
+    <label class="botao-mini arquivo-config">
+        Abrir configuração
+        <InputFile accept=".json,application/json" OnChange="AbrirConfiguracao" />
+    </label>
+</div>
+@if (erroArquivo is not null)
+{
+    <p class="alerta risco" role="alert">@erroArquivo</p>
+}
+
+@code {
+    private const long TamanhoMaximoArquivo = 2 * 1024 * 1024;
+
+    private string? erroArquivo;
+
+    [Parameter, EditorRequired] public EstadoVega Estado { get; set; } = default!;
+    [Parameter, EditorRequired] public UnattendGenerator Gerador { get; set; } = default!;
+    [Parameter] public EventCallback AoMudar { get; set; }
+    [Parameter] public EventCallback<EstadoVega> AoAbrir { get; set; }
+
+    private Task Mudou() => AoMudar.InvokeAsync();
+
+    private async Task SalvarConfiguracao()
+    {
+        erroArquivo = null;
+        await JS.InvokeVoidAsync("vega.baixar", "vega-configuracao.json", Encoding.UTF8.GetBytes(Estado.Exportar()));
+    }
+
+    private async Task AbrirConfiguracao(InputFileChangeEventArgs evento)
+    {
+        erroArquivo = null;
+        try
+        {
+            using var leitor = new StreamReader(evento.File.OpenReadStream(TamanhoMaximoArquivo));
+            await AoAbrir.InvokeAsync(EstadoVega.Importar(await leitor.ReadToEndAsync()));
+        }
+        catch (JsonException)
+        {
+            erroArquivo = "Esse arquivo não é uma configuração do Vega.";
+        }
+        catch (IOException)
+        {
+            erroArquivo = "Não foi possível ler o arquivo. Ele precisa ter menos de 2 MB.";
+        }
+    }
+
+    private IEnumerable<Pass> FasesDe(ComponenteXml componente) =>
+        Gerador.Components.TryGetValue(componente.Componente, out var item) ? item.Passes : Enum.GetValues<Pass>();
+
+    private Task AdicionarScript()
+    {
+        Estado.Scripts.Add(new ScriptUsuario());
+        return Mudou();
+    }
+
+    private Task RemoverScript(ScriptUsuario script)
+    {
+        Estado.Scripts.Remove(script);
+        return Mudou();
+    }
+
+    private Task AdicionarComponente()
+    {
+        var primeiro = Gerador.Components.Values.OrderBy(c => c.Id).First();
+        Estado.Componentes.Add(new ComponenteXml { Componente = primeiro.Id, Fase = primeiro.Passes.First() });
+        return Mudou();
+    }
+
+    private Task RemoverComponente(ComponenteXml componente)
+    {
+        Estado.Componentes.Remove(componente);
+        return Mudou();
+    }
+}

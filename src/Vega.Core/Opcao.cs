@@ -12,6 +12,7 @@ public enum Categoria
     Desempenho,
     Seguranca,
     Interface,
+    Aparencia,
     Edge,
     MaquinaVirtual,
     Avancado,
@@ -45,6 +46,9 @@ public sealed record OpcaoScript(
     Action<EstadoVega, bool> Gravar,
     Aviso Aviso = Aviso.Nenhum,
     string? Custo = null);
+
+/// <summary>Leva a busca até um campo que não é de ligar e desligar.</summary>
+public sealed record AtalhoBusca(string Titulo, string Termos, Categoria Categoria);
 
 /// <summary>Um item removível, com nome em português e o que se perde ao tirar.</summary>
 public sealed record ItemRemovivel(

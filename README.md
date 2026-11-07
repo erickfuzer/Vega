@@ -17,12 +17,16 @@ Monte a sua instalação do Windows sem perder tempo com o que não usa. Todas a
 </div>
 
 > [!NOTE]
-> O Vega está no começo. As opções de ligar e desligar e os itens de remoção já estão completos, mas ainda faltam algumas seções, listadas em [Limitações](#limitações). Teste o arquivo gerado em uma máquina virtual antes de usar em um computador de verdade, e relate o que encontrar em [Issues](https://github.com/erickfuzer/Vega/issues).
+> O Vega está no começo, e os perfis ainda não passaram por uma instalação real, como explica [Limitações](#limitações). Teste o arquivo gerado em uma máquina virtual antes de usar em um computador de verdade, e relate o que encontrar em [Issues](https://github.com/erickfuzer/Vega/issues).
 
 ## Funcionalidades
 
-- **Organizado por categoria:** instalação, conta e rede, apps, privacidade, desempenho, segurança, interface, Edge, máquina virtual e avançado, com um contador do que mudou em cada uma
-- **Busca:** encontre qualquer opção pelo nome ou pela descrição, sem precisar saber em qual categoria ela está
+- **Organizado por categoria:** instalação, disco, conta e rede, apps, privacidade, desempenho, segurança, interface e teclado, aparência, Edge, máquina virtual e avançado, com um contador do que mudou em cada uma
+- **Busca:** encontre qualquer opção pelo nome ou pela descrição, com ou sem acento, sem precisar saber em qual categoria ela está
+- **Todas as opções do motor:** contas prontas, login automático, políticas de senha, Wi-Fi, fuso, chave do produto, cores, papel de parede, Menu Iniciar, ícones, AppLocker, componentes XML e scripts nas quatro etapas
+- **Modo de desempenho:** efeitos visuais e planos Alto Desempenho e Desempenho Máximo
+- **Remoção completa do Edge:** roda no primeiro login, bloqueia a reinstalação e mantém o WebView2
+- **Salvar e abrir configuração:** guarde o que marcou em um arquivo para usar depois
 - **Perfis prontos:** comece em Windows padrão, Uso diário ou Remoção máxima, e ajuste o que quiser depois
 - **O custo de cada opção:** avisos dizem o que quebra ou o que se perde, em vez de deixar você descobrir depois de instalar
 - **Em português:** as 44 opções de ligar e desligar e os 60 itens removíveis têm nome e descrição em português
@@ -70,8 +74,9 @@ dotnet test tests/Vega.Tests
 - **Ainda não testado em uma instalação real:** os testes confirmam que o XML é válido e que o script do modo script pergunta e pausa antes de apagar, mas os perfis do Vega ainda não passaram por uma instalação do começo ao fim.
 - **Escolha de disco:** no modo script, o pendrive também aparece na lista e não é recusado. Confira o disco pelo tamanho.
 - **Defender:** no modo script, alguns serviços de monitoramento podem continuar rodando. Isso foi visto em um teste, com o mesmo método de desligamento.
-- **Seções que faltam:** conta criada com antecedência, perfil de Wi-Fi, scripts do primeiro login, AppLocker, papel de parede e cores, Menu Iniciar, fuso horário, nome do computador, chave do produto e políticas de senha.
-- **Remover o Edge:** o motor só libera o botão de desinstalar nas Configurações. A remoção completa ainda não está no Vega.
+- **Importar XML:** o Vega abre as próprias configurações, em JSON, mas não lê um `autounattend.xml` pronto, como o site original faz.
+- **Remover o Edge:** o script segue o método que funcionou em um notebook real. O ícone pode continuar na barra por um tempo, e links do Windows feitos só para o Edge podem parar de funcionar.
+- **Senhas no arquivo:** senhas, chaves e o Wi-Fi digitados ficam no XML e na configuração salva. Não compartilhe esses arquivos se usar dados reais.
 - **Download inicial:** o .NET vem junto com a página, cerca de 11 MB antes da compactação. As visitas seguintes usam o cache do navegador.
 
 ## Estrutura

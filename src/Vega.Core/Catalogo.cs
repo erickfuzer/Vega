@@ -17,7 +17,8 @@ public static class Catalogo
         [Categoria.Privacidade] = "Privacidade",
         [Categoria.Desempenho] = "Desempenho",
         [Categoria.Seguranca] = "Segurança",
-        [Categoria.Interface] = "Interface",
+        [Categoria.Interface] = "Interface e teclado",
+        [Categoria.Aparencia] = "Aparência",
         [Categoria.Edge] = "Edge",
         [Categoria.MaquinaVirtual] = "Máquina virtual",
         [Categoria.Avancado] = "Avançado",
@@ -192,6 +193,96 @@ public static class Catalogo
             "Não apaga o XML e os logs ao terminar. Útil para investigar problemas.",
             (c, v) => c with { KeepSensitiveFiles = v },
             Aviso.Risco, "O XML pode conter senhas e chaves, e fica guardado no disco."),
+    ];
+
+    public static IReadOnlyDictionary<Effect, string> NomesEfeitos { get; } = new Dictionary<Effect, string>
+    {
+        [Effect.ControlAnimations] = "Animar controles e elementos nas janelas",
+        [Effect.AnimateMinMax] = "Animar janelas ao minimizar e maximizar",
+        [Effect.TaskbarAnimations] = "Animações na barra de tarefas",
+        [Effect.DWMAeroPeekEnabled] = "Habilitar a Espiada",
+        [Effect.MenuAnimation] = "Esmaecer ou deslizar menus",
+        [Effect.TooltipAnimation] = "Esmaecer ou deslizar dicas de ferramentas",
+        [Effect.SelectionFade] = "Esmaecer itens de menu após o clique",
+        [Effect.DWMSaveThumbnailEnabled] = "Salvar miniaturas da barra de tarefas",
+        [Effect.CursorShadow] = "Sombra sob o ponteiro do mouse",
+        [Effect.ListviewShadow] = "Sombra em nomes de ícones na área de trabalho",
+        [Effect.ThumbnailsOrIcon] = "Mostrar miniaturas em vez de ícones",
+        [Effect.ListviewAlphaSelect] = "Retângulo de seleção translúcido",
+        [Effect.DragFullWindows] = "Mostrar o conteúdo ao arrastar janelas",
+        [Effect.ComboBoxAnimation] = "Deslizar caixas de combinação ao abrir",
+        [Effect.FontSmoothing] = "Suavizar as bordas das fontes",
+        [Effect.ListBoxSmoothScrolling] = "Rolagem suave em caixas de listagem",
+        [Effect.DropShadow] = "Sombra sob as janelas",
+    };
+
+    public static IReadOnlyDictionary<StickyKeys, string> NomesAderencia { get; } = new Dictionary<StickyKeys, string>
+    {
+        [StickyKeys.HotKeyActive] = "Ligar ao apertar Shift cinco vezes",
+        [StickyKeys.HotKeySound] = "Tocar um som ao ligar pelo atalho",
+        [StickyKeys.Indicator] = "Mostrar o ícone na barra de tarefas",
+        [StickyKeys.TriState] = "Travar a tecla ao apertar duas vezes",
+        [StickyKeys.TwoKeysOff] = "Desligar ao apertar duas teclas juntas",
+        [StickyKeys.AudibleFeedback] = "Tocar um som ao apertar uma tecla modificadora",
+    };
+
+    public static IReadOnlyDictionary<string, string> NomesIconesArea { get; } = new Dictionary<string, string>
+    {
+        ["RecycleBin"] = "Lixeira",
+        ["ThisPC"] = "Este Computador",
+        ["UserFiles"] = "Arquivos do usuário",
+        ["ControlPanel"] = "Painel de Controle",
+        ["Network"] = "Rede",
+        ["Desktop"] = "Área de Trabalho",
+        ["Documents"] = "Documentos",
+        ["Downloads"] = "Downloads",
+        ["Gallery"] = "Galeria",
+        ["Home"] = "Início",
+        ["Music"] = "Músicas",
+        ["Pictures"] = "Imagens",
+        ["Videos"] = "Vídeos",
+    };
+
+    public static IReadOnlyDictionary<string, string> NomesPastasIniciar { get; } = new Dictionary<string, string>
+    {
+        ["Settings"] = "Configurações",
+        ["FileExplorer"] = "Explorador de Arquivos",
+        ["Documents"] = "Documentos",
+        ["Downloads"] = "Downloads",
+        ["Music"] = "Músicas",
+        ["Pictures"] = "Imagens",
+        ["Videos"] = "Vídeos",
+        ["Network"] = "Rede",
+        ["PersonalFolder"] = "Pasta pessoal",
+    };
+
+    public static IReadOnlyList<AtalhoBusca> Atalhos { get; } =
+    [
+        new("Idioma, formato regional e teclado", "idioma linguagem regiao teclado abnt", Categoria.Instalacao),
+        new("Teclados adicionais", "segundo terceiro teclado layout", Categoria.Instalacao),
+        new("Edição do Windows e chave do produto", "edicao pro home chave licenca firmware ativacao", Categoria.Instalacao),
+        new("Arquitetura do processador", "arquitetura x64 amd64 arm64 x86", Categoria.Instalacao),
+        new("Modo de instalação e escolha do disco", "disco particao formatar gpt mbr winre recuperacao paginacao imagem", Categoria.Disco),
+        new("Contas prontas e login automático", "conta usuario senha administrador login automatico", Categoria.Conta),
+        new("Expiração de senha e bloqueio de conta", "senha expirar bloqueio tentativas", Categoria.Conta),
+        new("Nome do computador", "nome computador hostname", Categoria.Conta),
+        new("Fuso horário", "fuso hora horario", Categoria.Conta),
+        new("Wi-Fi", "wifi rede internet senha", Categoria.Conta),
+        new("Efeitos visuais", "modo efeitos visuais animacao melhor desempenho aparencia", Categoria.Desempenho),
+        new("Plano de energia", "modo energia plano alto desempenho maximo bateria", Categoria.Desempenho),
+        new("Caps Lock, Num Lock e Scroll Lock", "caps num scroll lock numerico", Categoria.Interface),
+        new("Teclas de aderência", "aderencia sticky acessibilidade shift", Categoria.Interface),
+        new("Cores e tema", "cor tema escuro claro destaque transparencia", Categoria.Aparencia),
+        new("Papel de parede", "papel parede wallpaper fundo", Categoria.Aparencia),
+        new("Tela de bloqueio", "bloqueio lock imagem", Categoria.Aparencia),
+        new("Menu Iniciar", "iniciar fixados blocos pastas", Categoria.Aparencia),
+        new("Ícones da barra e da área de trabalho", "icones barra area trabalho lixeira", Categoria.Aparencia),
+        new("Remover o Edge por completo", "edge remover desinstalar", Categoria.Edge),
+        new("Scripts próprios", "script powershell cmd reg vbs primeiro login", Categoria.Avancado),
+        new("Componentes XML", "componente xml unattend", Categoria.Avancado),
+        new("AppLocker", "applocker politica bloquear", Categoria.Seguranca),
+        new("Auditoria de processos", "auditoria processos linha comando", Categoria.Seguranca),
+        new("Salvar e abrir configuração", "salvar abrir importar exportar configuracao", Categoria.Avancado),
     ];
 
     public static IReadOnlyList<OpcaoScript> OpcoesScript { get; } =

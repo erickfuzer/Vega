@@ -1,0 +1,56 @@
+<h3 class="grupo-titulo">Teclas de travamento</h3>
+<div class="lista">
+    <Interruptor Titulo="Configurar Caps Lock, Num Lock e Scroll Lock" Descricao="Define como cada tecla começa e se ela funciona." @bind-Valor="Estado.ConfigurarTeclas" @bind-Valor:after="Mudou" />
+    @if (Estado.ConfigurarTeclas)
+    {
+        <Campo Titulo="Caps Lock ao iniciar">
+            <select @bind="Estado.CapsLockInicial" @bind:after="Mudou"><option value="@LockKeyInitial.Off">Desligado</option><option value="@LockKeyInitial.On">Ligado</option></select>
+        </Campo>
+        <Campo Titulo="Tecla Caps Lock">
+            <select @bind="Estado.CapsLockComportamento" @bind:after="Mudou"><option value="@LockKeyBehavior.Toggle">Funciona normalmente</option><option value="@LockKeyBehavior.Ignore">Ignorar a tecla</option></select>
+        </Campo>
+        <Campo Titulo="Num Lock ao iniciar">
+            <select @bind="Estado.NumLockInicial" @bind:after="Mudou"><option value="@LockKeyInitial.Off">Desligado</option><option value="@LockKeyInitial.On">Ligado</option></select>
+        </Campo>
+        <Campo Titulo="Tecla Num Lock">
+            <select @bind="Estado.NumLockComportamento" @bind:after="Mudou"><option value="@LockKeyBehavior.Toggle">Funciona normalmente</option><option value="@LockKeyBehavior.Ignore">Ignorar a tecla</option></select>
+        </Campo>
+        <Campo Titulo="Scroll Lock ao iniciar">
+            <select @bind="Estado.ScrollLockInicial" @bind:after="Mudou"><option value="@LockKeyInitial.Off">Desligado</option><option value="@LockKeyInitial.On">Ligado</option></select>
+        </Campo>
+        <Campo Titulo="Tecla Scroll Lock">
+            <select @bind="Estado.ScrollLockComportamento" @bind:after="Mudou"><option value="@LockKeyBehavior.Toggle">Funciona normalmente</option><option value="@LockKeyBehavior.Ignore">Ignorar a tecla</option></select>
+        </Campo>
+    }
+</div>
+
+<h3 class="grupo-titulo">Teclas de aderência</h3>
+<div class="lista">
+    <Campo Titulo="Teclas de aderência" Descricao="Desligado evita o aviso ao apertar Shift cinco vezes, comum em jogos.">
+        <select @bind="Estado.Aderencia" @bind:after="Mudou">
+            <option value="@ModoAderencia.Padrao">Padrão do Windows</option>
+            <option value="@ModoAderencia.Desligado">Desligado</option>
+            <option value="@ModoAderencia.Personalizado">Personalizado</option>
+        </select>
+    </Campo>
+    @if (Estado.Aderencia == ModoAderencia.Personalizado)
+    {
+        @foreach (var (opcao, nome) in Catalogo.NomesAderencia)
+        {
+            <Interruptor Titulo="@nome" Valor="Estado.AderenciaOpcoes.Contains(opcao)" ValorChanged="v => AlternarAderencia(opcao, v)" />
+        }
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public EstadoVega Estado { get; set; } = default!;
+    [Parameter] public EventCallback AoMudar { get; set; }
+
+    private Task Mudou() => AoMudar.InvokeAsync();
+
+    private Task AlternarAderencia(StickyKeys opcao, bool ligada)
+    {
+        if (ligada) Estado.AderenciaOpcoes.Add(opcao); else Estado.AderenciaOpcoes.Remove(opcao);
+        return Mudou();
+    }
+}

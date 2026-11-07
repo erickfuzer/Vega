@@ -40,7 +40,7 @@
         <nav class="categorias" aria-label="Categorias">
             @foreach (var categoria in Enum.GetValues<Categoria>())
             {
-                var total = ContarAlteracoes(categoria);
+                var total = estado.ContarAlteracoes(categoria);
                 <button type="button" class="categoria @(!Buscando && categoriaAtual == categoria ? "ativa" : "")" @onclick="() => SelecionarCategoria(categoria)">
                     @Catalogo.NomesCategorias[categoria]
                     @if (total > 0)
@@ -59,9 +59,23 @@
             var opcoes = Catalogo.Opcoes.Where(o => Combina(o.Titulo) || Combina(o.Descricao)).ToList();
             var apps = Catalogo.Apps.Where(a => Combina(a.Nome) || Combina(a.Grupo)).ToList();
             var opcoesScript = Catalogo.OpcoesScript.Where(o => Combina(o.Titulo) || Combina(o.Descricao)).ToList();
-            @if (opcoes.Count == 0 && apps.Count == 0 && opcoesScript.Count == 0)
+            var atalhos = Catalogo.Atalhos.Where(a => Combina(a.Titulo) || Combina(a.Termos) || Combina(Catalogo.NomesCategorias[a.Categoria])).ToList();
+            @if (opcoes.Count == 0 && apps.Count == 0 && opcoesScript.Count == 0 && atalhos.Count == 0)
             {
                 <p class="vazio">Nada encontrado para "@busca".</p>
+            }
+            @if (atalhos.Count > 0)
+            {
+                <h3 class="resultado-categoria">Ir para</h3>
+                <div class="lista">
+                    @foreach (var atalho in atalhos)
+                    {
+                        <button type="button" class="atalho" @onclick="() => SelecionarCategoria(atalho.Categoria)">
+                            @atalho.Titulo
+                            <span>@Catalogo.NomesCategorias[atalho.Categoria]</span>
+                        </button>
+                    }
+                </div>
             }
             @if (opcoesScript.Count > 0)
             {
@@ -147,17 +161,6 @@
                                 }
                             </select>
                         </label>
-                        <label class="campo">
-                            <span class="campo-titulo">Edição do Windows</span>
-                            <span class="campo-descricao">Precisa bater com a licença da máquina para ativar sozinha.</span>
-                            <select @bind="estado.Edicao">
-                                <option value="">Perguntar na instalação</option>
-                                @foreach (var item in Gerador.WindowsEditions.Values.Where(e => e.Visible).OrderBy(i => i.DisplayName))
-                                {
-                                    <option value="@item.Id">@item.DisplayName</option>
-                                }
-                            </select>
-                        </label>
                         <label class="opcao @(estado.IgnorarRequisitos && estado.Modo == ModoInstalacao.TelaNormal ? "ligada" : "") @(estado.Modo != ModoInstalacao.TelaNormal ? "desativada" : "")">
                             <span class="opcao-titulo">Ignorar os requisitos do Windows 11</span>
                             <span class="opcao-descricao">Permite instalar sem TPM, Secure Boot ou processador da lista oficial. No modo script, a verificação não acontece.</span>
@@ -165,6 +168,7 @@
                         </label>
                         @ListaOpcoes(Categoria.Instalacao)
                     </div>
+                    <SecaoInstalacaoExtra Estado="estado" Gerador="Gerador" AoMudar="LimparErro" />
                     break;
 
                 case Categoria.Disco:
@@ -401,36 +405,47 @@
                     <div class="lista">
                         @ListaOpcoesScript(Categoria.Seguranca)
                         @ListaOpcoes(Categoria.Seguranca)
+                        <SecaoSegurancaExtra Estado="estado" AoMudar="LimparErro" />
                     </div>
                     break;
 
                 case Categoria.Conta:
-                    <p class="secao-sub">Como a conta é criada e o que aparece na configuração inicial.</p>
+                    <SecaoConta Estado="estado" Gerador="Gerador" AoMudar="LimparErro" />
+                    <h3 class="grupo-titulo">Acesso</h3>
                     <div class="lista">
-                        <label class="campo">
-                            <span class="campo-titulo">Tipo de conta</span>
-                            <span class="campo-descricao">A conta local é criada na hora, sem pedir email.</span>
-                            <select @bind="estado.Conta">
-                                <option value="@TipoConta.Local">Conta local</option>
-                                <option value="@TipoConta.Microsoft">Conta Microsoft</option>
-                            </select>
-                        </label>
-                        <label class="opcao @(estado.MostrarTelaWifi ? "ligada" : "")">
-                            <span class="opcao-titulo">Mostrar a tela de rede na configuração inicial</span>
-                            <span class="opcao-descricao">Desligada, a tela é pulada e o Wi-Fi fica para depois do primeiro login.</span>
-                            <input class="chave" type="checkbox" role="switch" @bind="estado.MostrarTelaWifi" />
-                        </label>
-                        <label class="campo">
-                            <span class="campo-titulo">Configurações de privacidade</span>
-                            <span class="campo-descricao">As opções que o Windows pergunta na configuração inicial.</span>
-                            <select @bind="estado.Privacidade">
-                                <option value="@ExpressSettingsMode.DisableAll">Desligar todas</option>
-                                <option value="@ExpressSettingsMode.Interactive">Perguntar na instalação</option>
-                                <option value="@ExpressSettingsMode.EnableAll">Ligar todas</option>
-                            </select>
-                        </label>
                         @ListaOpcoes(Categoria.Conta)
                     </div>
+                    break;
+
+                case Categoria.Desempenho:
+                    <p class="secao-sub">O modo de desempenho do Windows e ajustes que aliviam o sistema.</p>
+                    <SecaoDesempenho Estado="estado" AoMudar="MarcarPersonalizado" />
+                    <h3 class="grupo-titulo">Ajustes do sistema</h3>
+                    <div class="lista">
+                        @ListaOpcoes(Categoria.Desempenho)
+                    </div>
+                    break;
+
+                case Categoria.Aparencia:
+                    <SecaoAparencia Estado="estado" AoMudar="LimparErro" />
+                    break;
+
+                case Categoria.Edge:
+                    <div class="lista">
+                        <Interruptor Titulo="Remover o Edge por completo"
+                                     Descricao="Roda no primeiro login e bloqueia a reinstalação. Mantém o WebView2, que outros programas usam."
+                                     Custo="O ícone pode ficar na barra por um tempo. Links do Windows feitos para abrir só no Edge podem parar de funcionar."
+                                     Aviso="Aviso.Atencao"
+                                     @bind-Valor="estado.RemoverEdge" @bind-Valor:after="MarcarPersonalizado" />
+                        @ListaOpcoes(Categoria.Edge)
+                    </div>
+                    break;
+
+                case Categoria.Avancado:
+                    <div class="lista">
+                        @ListaOpcoes(Categoria.Avancado)
+                    </div>
+                    <SecaoAvancado Estado="estado" Gerador="Gerador" AoMudar="LimparErro" AoAbrir="AbrirConfiguracao" />
                     break;
 
                 case Categoria.Apps:
@@ -475,6 +490,7 @@
                         </label>
                         @ListaOpcoes(Categoria.Interface)
                     </div>
+                    <SecaoTeclado Estado="estado" AoMudar="LimparErro" />
                     break;
 
                 default:
@@ -513,7 +529,7 @@
 </dialog>
 
 @code {
-    private readonly EstadoVega estado = new();
+    private EstadoVega estado = new();
     private UnattendGenerator? gerador;
     private Categoria categoriaAtual = Categoria.Instalacao;
     private string busca = "";
@@ -527,16 +543,24 @@
 
     private bool Buscando => !string.IsNullOrWhiteSpace(busca);
 
-    private int TotalAlteracoes => Enum.GetValues<Categoria>().Sum(ContarAlteracoes);
+    private int TotalAlteracoes => Enum.GetValues<Categoria>().Sum(estado.ContarAlteracoes);
 
-    private string NomeEdicao => string.IsNullOrEmpty(estado.Edicao)
-        ? "perguntar"
-        : Gerador.WindowsEditions[estado.Edicao].DisplayName;
+    private string NomeEdicao => Gerador.WindowsEditions.TryGetValue(estado.Edicao, out var edicao)
+        ? edicao.DisplayName
+        : "perguntar";
+
+    private void LimparErro() => erro = null;
 
     private void MarcarPersonalizado()
     {
         perfilAtivo = null;
         erro = null;
+    }
+
+    private void AbrirConfiguracao(EstadoVega novo)
+    {
+        estado = novo;
+        MarcarPersonalizado();
     }
 
     protected override async Task OnAfterRenderAsync(bool primeiraVez)
@@ -548,25 +572,7 @@
         }
     }
 
-    private bool Combina(string texto) => texto.Contains(busca.Trim(), StringComparison.OrdinalIgnoreCase);
-
-    private int ContarAlteracoes(Categoria categoria)
-    {
-        if (categoria == Categoria.Apps)
-        {
-            return estado.AppsRemovidos.Count;
-        }
-        var total = Catalogo.Opcoes.Count(o => o.Categoria == categoria && estado.OpcoesLigadas.Contains(o.Id));
-        if (categoria == Categoria.Disco && estado.Modo != ModoInstalacao.TelaNormal)
-        {
-            total++;
-        }
-        if (categoria == Categoria.Seguranca && estado.Modo == ModoInstalacao.Script && estado.DesligarDefender)
-        {
-            total++;
-        }
-        return total;
-    }
+    private bool Combina(string texto) => Busca.Combina(texto, busca);
 
     private void AlternarOpcaoScript(OpcaoScript opcao, bool ligada)
     {
@@ -622,7 +628,7 @@
         }
         catch (ConfigurationException falha)
         {
-            erro = $"Essa combinação não pode ser gerada: {falha.Message}";
+            erro = $"Essa combinação não pode ser gerada. {ErrosDoMotor.Traduzir(falha.Message)}";
         }
         catch (Exception falha)
         {

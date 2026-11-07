@@ -1,0 +1,105 @@
+<h3 class="grupo-titulo">Teclados adicionais</h3>
+<div class="lista">
+    <Interruptor Titulo="Adicionar um segundo teclado" Descricao="Fica disponível na barra de idioma do Windows." Desativado="@Estado.EscolherIdiomaNaInstalacao" @bind-Valor="Estado.UsarTeclado2" @bind-Valor:after="Mudou" />
+    @if (Estado.UsarTeclado2 && !Estado.EscolherIdiomaNaInstalacao)
+    {
+        <Campo Titulo="Segundo formato regional">
+            <select @bind="Estado.IdiomaRegional2" @bind:after="Mudou">
+                @foreach (var item in Gerador.UserLocales.Values.OrderBy(i => i.DisplayName))
+                {
+                    <option value="@item.Id">@item.DisplayName</option>
+                }
+            </select>
+        </Campo>
+        <Campo Titulo="Segundo teclado">
+            <select @bind="Estado.Teclado2" @bind:after="Mudou">
+                @foreach (var item in Gerador.KeyboardIdentifiers.Values.OrderBy(i => i.DisplayName))
+                {
+                    <option value="@item.Id">@item.DisplayName</option>
+                }
+            </select>
+        </Campo>
+        <Interruptor Titulo="Adicionar um terceiro teclado" @bind-Valor="Estado.UsarTeclado3" @bind-Valor:after="Mudou" />
+        @if (Estado.UsarTeclado3)
+        {
+            <Campo Titulo="Terceiro formato regional">
+                <select @bind="Estado.IdiomaRegional3" @bind:after="Mudou">
+                    @foreach (var item in Gerador.UserLocales.Values.OrderBy(i => i.DisplayName))
+                    {
+                        <option value="@item.Id">@item.DisplayName</option>
+                    }
+                </select>
+            </Campo>
+            <Campo Titulo="Terceiro teclado">
+                <select @bind="Estado.Teclado3" @bind:after="Mudou">
+                    @foreach (var item in Gerador.KeyboardIdentifiers.Values.OrderBy(i => i.DisplayName))
+                    {
+                        <option value="@item.Id">@item.DisplayName</option>
+                    }
+                </select>
+            </Campo>
+        }
+    }
+</div>
+
+<h3 class="grupo-titulo">Edição e licença</h3>
+<div class="lista">
+    <Campo Titulo="Edição do Windows" Descricao="Precisa bater com a licença da máquina para ativar sozinha.">
+        <select @bind="Estado.Edicao" @bind:after="Mudou">
+            <option value="">Perguntar na instalação</option>
+            <option value="@EstadoVega.EdicaoFirmware">Usar a chave gravada na placa-mãe</option>
+            <option value="@EstadoVega.EdicaoChave">Informar uma chave do produto</option>
+            @foreach (var item in Gerador.WindowsEditions.Values.Where(e => e.Visible).OrderBy(i => i.DisplayName))
+            {
+                <option value="@item.Id">@item.DisplayName</option>
+            }
+        </select>
+    </Campo>
+    @if (Estado.Edicao == EstadoVega.EdicaoChave)
+    {
+        <Campo Titulo="Chave do produto" Descricao="Define a edição. O XML guarda a chave em texto, então cuidado ao compartilhar.">
+            <input type="text" spellcheck="false" placeholder="XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" @bind="Estado.ChaveProduto" @bind:after="Mudou" />
+        </Campo>
+    }
+    @if (Estado.Modo != ModoInstalacao.TelaNormal && Estado.Edicao is EstadoVega.EdicaoFirmware or EstadoVega.EdicaoChave)
+    {
+        <p class="alerta atencao">No modo script, esta escolha não vale: a imagem é definida em Disco e imagem. Para ativar com uma chave, use a opção abaixo.</p>
+    }
+    <Interruptor Titulo="Ativar com uma chave específica" Descricao="Usa esta chave para ativar depois de instalar, independentemente da edição." @bind-Valor="Estado.UsarChaveAtivacao" @bind-Valor:after="Mudou" Custo="@(Estado.UsarChaveAtivacao ? "O XML guarda a chave em texto, então cuidado ao compartilhar." : null)" Aviso="Aviso.Atencao" />
+    @if (Estado.UsarChaveAtivacao)
+    {
+        <Campo Titulo="Chave de ativação">
+            <input type="text" spellcheck="false" placeholder="XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" @bind="Estado.ChaveAtivacao" @bind:after="Mudou" />
+        </Campo>
+    }
+</div>
+
+<h3 class="grupo-titulo">Arquitetura do processador</h3>
+<p class="secao-sub">O XML só se aplica às arquiteturas marcadas. Mantenha x64 para quase todos os computadores.</p>
+<div class="lista">
+    @foreach (var (arquitetura, nome) in Arquiteturas)
+    {
+        <Interruptor Titulo="@nome" Valor="Estado.Arquiteturas.Contains(arquitetura)" ValorChanged="v => AlternarArquitetura(arquitetura, v)" />
+    }
+</div>
+
+@code {
+    private static readonly (ProcessorArchitecture, string)[] Arquiteturas =
+    [
+        (ProcessorArchitecture.amd64, "x64 (Intel e AMD de 64 bits)"),
+        (ProcessorArchitecture.arm64, "ARM64"),
+        (ProcessorArchitecture.x86, "x86 (32 bits)"),
+    ];
+
+    [Parameter, EditorRequired] public EstadoVega Estado { get; set; } = default!;
+    [Parameter, EditorRequired] public UnattendGenerator Gerador { get; set; } = default!;
+    [Parameter] public EventCallback AoMudar { get; set; }
+
+    private Task Mudou() => AoMudar.InvokeAsync();
+
+    private Task AlternarArquitetura(ProcessorArchitecture arquitetura, bool ligada)
+    {
+        if (ligada) Estado.Arquiteturas.Add(arquitetura); else Estado.Arquiteturas.Remove(arquitetura);
+        return Mudou();
+    }
+}

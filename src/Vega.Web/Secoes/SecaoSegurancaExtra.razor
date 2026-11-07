@@ -1,0 +1,20 @@
+<Interruptor Titulo="Registrar os processos iniciados" Descricao="Grava no log de segurança cada programa aberto. Útil para investigar problemas." @bind-Valor="Estado.AuditarProcessos" @bind-Valor:after="Mudou" />
+@if (Estado.AuditarProcessos)
+{
+    <Interruptor Titulo="Incluir a linha de comando" Custo="A linha de comando pode conter senhas, e elas ficariam no log." Aviso="Aviso.Atencao" @bind-Valor="Estado.AuditarLinhaDeComando" @bind-Valor:after="Mudou" />
+}
+<Interruptor Titulo="Aplicar uma política do AppLocker" Descricao="Define quais programas podem rodar." @bind-Valor="Estado.UsarAppLocker" @bind-Valor:after="Mudou" />
+@if (Estado.UsarAppLocker)
+{
+    <p class="alerta atencao">Uma regra errada pode impedir o próprio Windows de abrir programas. Exige edição compatível.</p>
+    <Campo Titulo="Política do AppLocker (XML)" Largo="true">
+        <textarea rows="8" spellcheck="false" @bind="Estado.AppLockerXml" @bind:after="Mudou"></textarea>
+    </Campo>
+}
+
+@code {
+    [Parameter, EditorRequired] public EstadoVega Estado { get; set; } = default!;
+    [Parameter] public EventCallback AoMudar { get; set; }
+
+    private Task Mudou() => AoMudar.InvokeAsync();
+}
