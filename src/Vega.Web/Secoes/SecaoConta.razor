@@ -36,7 +36,7 @@
             <button type="button" class="botao-mini" disabled="@(Estado.Contas.Count >= MaximoContas)" @onclick="AdicionarConta">Adicionar conta</button>
         </div>
 
-        <Campo Titulo="Login automático" Descricao="Sem login automático, a instalação para na tela de login e os arquivos de instalação precisam ser mantidos.">
+        <Campo Titulo="Login automático" Descricao="Vários ajustes só valem quando um administrador entra pela primeira vez. Não entrar sozinho não é recomendado: exige manter os arquivos de instalação, e quem entrar primeiro precisa ser administrador.">
             <select @bind="Estado.Login" @bind:after="Mudou">
                 <option value="@LoginAutomatico.PrimeiraConta">Entrar com a primeira conta de administrador</option>
                 <option value="@LoginAutomatico.Administrador">Entrar com a conta Administrador interna</option>
@@ -66,7 +66,7 @@
         </Campo>
     }
 
-    <Campo Titulo="Bloqueio após senhas erradas" Descricao="Protege contra quem tenta adivinhar a senha.">
+    <Campo Titulo="Bloqueio após senhas erradas" Descricao="Protege contra quem tenta adivinhar a senha. Desligado, o computador fica mais exposto a isso.">
         <select @bind="Estado.Bloqueio" @bind:after="Mudou">
             <option value="@ModoBloqueio.Padrao">Padrão do Windows</option>
             <option value="@ModoBloqueio.Desligado">Desligado</option>
@@ -140,8 +140,8 @@
     @if (Estado.Wifi == ModoWifi.Configurar)
     {
         <p class="alerta atencao">A senha do Wi-Fi fica dentro do XML. Não compartilhe o arquivo.</p>
-        <Campo Titulo="Nome da rede (SSID)">
-            <input type="text" spellcheck="false" @bind="Estado.WifiNome" @bind:after="Mudou" />
+        <Campo Titulo="Nome da rede (SSID)" Descricao="Até 32 caracteres.">
+            <input type="text" spellcheck="false" maxlength="32" @bind="Estado.WifiNome" @bind:after="Mudou" />
         </Campo>
         <Campo Titulo="Segurança">
             <select @bind="Estado.WifiAutenticacao" @bind:after="Mudou">
@@ -152,8 +152,8 @@
         </Campo>
         @if (Estado.WifiAutenticacao != WifiAuthentications.Open)
         {
-            <Campo Titulo="Senha da rede">
-                <input type="password" autocomplete="new-password" @bind="Estado.WifiSenha" @bind:after="Mudou" />
+            <Campo Titulo="Senha da rede" Descricao="De 8 a 63 caracteres.">
+                <input type="password" autocomplete="new-password" maxlength="63" @bind="Estado.WifiSenha" @bind:after="Mudou" />
             </Campo>
         }
         <Interruptor Titulo="Conectar automaticamente" @bind-Valor="Estado.WifiConectarSozinho" @bind-Valor:after="Mudou" />
@@ -161,7 +161,7 @@
     }
     else if (Estado.Wifi == ModoWifi.ArquivoXml)
     {
-        <Campo Titulo="Perfil de Wi-Fi (XML)" Descricao="Gerado com netsh wlan export profile." Largo="true">
+        <Campo Titulo="Perfil de Wi-Fi (XML)" Descricao="Gerado com netsh wlan export profile key=clear em outro computador. Sem key=clear, a senha não funciona aqui." Largo="true">
             <textarea rows="8" spellcheck="false" @bind="Estado.WifiXml" @bind:after="Mudou"></textarea>
         </Campo>
     }

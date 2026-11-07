@@ -1,10 +1,8 @@
 @using System.Text
-@using Microsoft.AspNetCore.Components.Forms
-@using Newtonsoft.Json
 @inject IJSRuntime JS
 
 <h3 class="grupo-titulo">Scripts próprios</h3>
-<p class="secao-sub">Rodam na ordem da lista. O que é arriscado funciona melhor no primeiro login, porque mudanças antes da configuração inicial podem travar a instalação.</p>
+<p class="secao-sub">Dentro de cada etapa, rodam na ordem da lista. O que é arriscado funciona melhor no primeiro login, porque mudanças antes da configuração inicial podem travar a instalação. Linhas em branco são ignoradas.</p>
 <div class="lista">
     @foreach (var script in Estado.Scripts)
     {
@@ -15,7 +13,7 @@
             </div>
             <div class="bloco-grade">
                 <label class="mini-campo">Quando rodar
-                    <select @bind="script.Fase" @bind:after="Mudou">
+                    <select @bind="script.Fase" @bind:after="() => AjustarTipo(script)">
                         <option value="@ScriptPhase.System">Sistema, antes de criar os usuários</option>
                         <option value="@ScriptPhase.DefaultUser">Registro do usuário padrão</option>
                         <option value="@ScriptPhase.FirstLogon">Primeiro login, como administrador</option>
@@ -24,12 +22,9 @@
                 </label>
                 <label class="mini-campo">Tipo
                     <select @bind="script.Tipo" @bind:after="Mudou">
-                        <option value="@ScriptType.Ps1">PowerShell (.ps1)</option>
-                        <option value="@ScriptType.Cmd">Prompt de comando (.cmd)</option>
-                        <option value="@ScriptType.Reg">Registro (.reg)</option>
-                        @if (script.Fase != ScriptPhase.DefaultUser)
+                        @foreach (var tipo in script.Fase.GetAllowedTypes())
                         {
-                            <option value="@ScriptType.Vbs">VBScript (.vbs)</option>
+                            <option value="@tipo">@NomeDoTipo(tipo)</option>
                         }
                     </select>
                 </label>
@@ -44,34 +39,27 @@
 </div>
 
 <h3 class="grupo-titulo">Componentes XML</h3>
-<p class="secao-sub">Adiciona configurações do Windows que o Vega não oferece. Veja os nomes na documentação da Microsoft.</p>
+<p class="secao-sub">Grava configurações do Windows que o Vega não oferece. Se o Vega já usa o componente naquela etapa, o seu XML substitui tudo o que foi gerado ali. Linhas em branco são ignoradas.</p>
 <div class="lista">
     @foreach (var componente in Estado.Componentes)
     {
-        var fases = FasesDe(componente);
         <div class="bloco">
             <div class="bloco-topo">
                 <strong>@(string.IsNullOrEmpty(componente.Componente) ? "Novo componente" : componente.Componente)</strong>
                 <button type="button" class="botao-mini" @onclick="() => RemoverComponente(componente)">Remover</button>
             </div>
-            <div class="bloco-grade">
-                <label class="mini-campo">Componente
-                    <select @bind="componente.Componente" @bind:after="Mudou">
-                        @foreach (var item in Gerador.Components.Values.OrderBy(c => c.Id))
-                        {
-                            <option value="@item.Id">@item.Id</option>
-                        }
-                    </select>
-                </label>
-                <label class="mini-campo">Etapa
-                    <select @bind="componente.Fase" @bind:after="Mudou">
-                        @foreach (var fase in fases)
-                        {
-                            <option value="@fase">@fase</option>
-                        }
-                    </select>
-                </label>
-            </div>
+            <label class="mini-campo">Componente e etapa
+                <select value="@Chave(componente.Componente, componente.Fase)" @onchange="e => TrocarComponente(componente, e)">
+                    @foreach (var (chave, nome) in OpcoesDeComponente)
+                    {
+                        <option value="@chave">@nome</option>
+                    }
+                </select>
+            </label>
+            @if (ComponentesUsados.Contains((componente.Componente, componente.Fase)))
+            {
+                <p class="alerta risco" role="alert">O Vega já usa este componente nesta etapa. Seu XML apaga tudo o que foi gerado aqui, e scripts, contas ou o nome do computador podem parar de funcionar, sem nenhum erro.</p>
+            }
             <textarea rows="5" spellcheck="false" aria-label="XML do componente" @bind="componente.Xml" @bind:after="Mudou"></textarea>
         </div>
     }
@@ -80,58 +68,87 @@
     </div>
 </div>
 
-<h3 class="grupo-titulo">Salvar e abrir configuração</h3>
-<p class="secao-sub">Guarde o que você marcou em um arquivo para usar depois. O arquivo inclui as senhas e chaves digitadas, então cuidado ao compartilhar.</p>
-<div class="acoes-lista">
+<h3 class="grupo-titulo">Salvar, abrir e compartilhar</h3>
+<p class="secao-sub">O arquivo salvo inclui as senhas e chaves digitadas, então cuidado ao compartilhar. O link não leva senhas nem chaves. Também dá para abrir um XML do Vega ou do gerador original.</p>
+<div class="acoes-lista arquivos">
     <button type="button" class="botao-mini" @onclick="SalvarConfiguracao">Salvar configuração</button>
-    <label class="botao-mini arquivo-config">
-        Abrir configuração
-        <InputFile accept=".json,application/json" OnChange="AbrirConfiguracao" />
-    </label>
+    <AbrirArquivo AoAbrir="AoAbrir" />
+    <button type="button" class="botao-mini" @onclick="CopiarLink">@(linkCopiado ? "Link copiado!" : "Copiar link")</button>
 </div>
-@if (erroArquivo is not null)
-{
-    <p class="alerta risco" role="alert">@erroArquivo</p>
-}
+
+<h3 class="grupo-titulo">Arquivo gerado</h3>
+<div class="lista">
+    <Interruptor Titulo="Usar o nome notautounattend.xml"
+                 Descricao="Com esse nome, o Windows não acha o arquivo sozinho, então o pendrive não inicia a instalação automática em qualquer computador. Renomeie para autounattend.xml quando for usar."
+                 @bind-Valor="Estado.NomeSemAutoInstalar" @bind-Valor:after="Mudou" />
+</div>
 
 @code {
-    private const long TamanhoMaximoArquivo = 2 * 1024 * 1024;
-
-    private string? erroArquivo;
+    private bool linkCopiado;
+    private string? assinaturaComponentes;
+    private IReadOnlySet<(string Componente, Pass Fase)> ComponentesUsados = new HashSet<(string, Pass)>();
+    private IReadOnlyList<(string Chave, string Nome)>? opcoesDeComponente;
 
     [Parameter, EditorRequired] public EstadoVega Estado { get; set; } = default!;
     [Parameter, EditorRequired] public UnattendGenerator Gerador { get; set; } = default!;
     [Parameter] public EventCallback AoMudar { get; set; }
-    [Parameter] public EventCallback<EstadoVega> AoAbrir { get; set; }
+    [Parameter] public EventCallback<ConfiguracaoAberta> AoAbrir { get; set; }
 
-    private Task Mudou() => AoMudar.InvokeAsync();
+    private IReadOnlyList<(string Chave, string Nome)> OpcoesDeComponente => opcoesDeComponente ??= Gerador.Components.Values
+        .OrderBy(c => c.Id)
+        .SelectMany(c => c.Passes.Select(p => (Chave(c.Id, p), $"{c.Id} – {p}")))
+        .ToList();
 
-    private async Task SalvarConfiguracao()
+    /// <summary>Gerar o XML custa caro, então só confere de novo quando a lista de componentes muda.</summary>
+    protected override void OnParametersSet()
     {
-        erroArquivo = null;
-        await JS.InvokeVoidAsync("vega.baixar", "vega-configuracao.json", Encoding.UTF8.GetBytes(Estado.Exportar()));
-    }
-
-    private async Task AbrirConfiguracao(InputFileChangeEventArgs evento)
-    {
-        erroArquivo = null;
-        try
+        var assinatura = string.Join(";", Estado.Componentes.Select(c => Chave(c.Componente, c.Fase)));
+        if (assinatura != assinaturaComponentes)
         {
-            using var leitor = new StreamReader(evento.File.OpenReadStream(TamanhoMaximoArquivo));
-            await AoAbrir.InvokeAsync(EstadoVega.Importar(await leitor.ReadToEndAsync()));
-        }
-        catch (JsonException)
-        {
-            erroArquivo = "Esse arquivo não é uma configuração do Vega.";
-        }
-        catch (IOException)
-        {
-            erroArquivo = "Não foi possível ler o arquivo. Ele precisa ter menos de 2 MB.";
+            assinaturaComponentes = assinatura;
+            ComponentesUsados = Estado.Componentes.Count > 0 ? Estado.ComponentesJaUsados(Gerador) : new HashSet<(string, Pass)>();
         }
     }
 
-    private IEnumerable<Pass> FasesDe(ComponenteXml componente) =>
-        Gerador.Components.TryGetValue(componente.Componente, out var item) ? item.Passes : Enum.GetValues<Pass>();
+    private Task Mudou()
+    {
+        linkCopiado = false;
+        return AoMudar.InvokeAsync();
+    }
+
+    private static string Chave(string componente, Pass fase) => $"{componente}|{fase}";
+
+    private static string NomeDoTipo(ScriptType tipo) => tipo switch
+    {
+        ScriptType.Ps1 => "PowerShell (.ps1)",
+        ScriptType.Cmd => "Prompt de comando (.cmd)",
+        ScriptType.Reg => "Registro (.reg)",
+        ScriptType.Vbs => "VBScript (.vbs)",
+        _ => tipo.ToString(),
+    };
+
+    /// <summary>Nem toda etapa aceita todo tipo, e o tipo escondido não pode continuar valendo.</summary>
+    private Task AjustarTipo(ScriptUsuario script)
+    {
+        if (!script.Fase.GetAllowedTypes().Contains(script.Tipo))
+        {
+            script.Tipo = ScriptType.Ps1;
+        }
+
+        return Mudou();
+    }
+
+    private Task TrocarComponente(ComponenteXml componente, ChangeEventArgs evento)
+    {
+        var partes = (evento.Value as string ?? "").Split('|');
+        if (partes.Length == 2 && Enum.TryParse<Pass>(partes[1], out var fase))
+        {
+            componente.Componente = partes[0];
+            componente.Fase = fase;
+        }
+
+        return Mudou();
+    }
 
     private Task AdicionarScript()
     {
@@ -157,4 +174,10 @@
         Estado.Componentes.Remove(componente);
         return Mudou();
     }
+
+    private async Task SalvarConfiguracao() =>
+        await JS.InvokeVoidAsync("vega.baixar", "vega-configuracao.json", Encoding.UTF8.GetBytes(Estado.Exportar()));
+
+    private async Task CopiarLink() =>
+        linkCopiado = await JS.InvokeAsync<bool>("vega.copiar", Compartilhamento.Link(Estado));
 }

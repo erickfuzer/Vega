@@ -28,14 +28,13 @@ public static class Catalogo
     [
         // Instalação
         new(nameof(Configuration.BypassNetworkCheck), Categoria.Instalacao, "Permitir instalar sem internet",
-            "Libera a opção de concluir a configuração inicial sem conexão.",
+            "Libera a opção de concluir a configuração inicial sem conexão. Serve para quem está sem internet: criar conta local não depende dela.",
             (c, v) => c with { BypassNetworkCheck = v }),
-        new(nameof(Configuration.DeleteWindowsOld), Categoria.Instalacao, "Apagar a pasta Windows.old",
-            "Remove a cópia da instalação anterior ao terminar.",
-            (c, v) => c with { DeleteWindowsOld = v },
-            Aviso.Atencao, "Depois disso, não dá para recuperar arquivos da instalação anterior."),
-        new(nameof(Configuration.UseNarrator), Categoria.Instalacao, "Usar o Narrador na instalação",
-            "Liga o leitor de tela durante a instalação, para quem precisa de acessibilidade.",
+        new(nameof(Configuration.DeleteWindowsOld), Categoria.Instalacao, "Apagar a pasta Windows.old vazia",
+            "Tira a pasta quando ela ficou vazia. Se ela tiver arquivos, continua no disco.",
+            (c, v) => c with { DeleteWindowsOld = v }),
+        new(nameof(Configuration.UseNarrator), Categoria.Instalacao, "Usar o Narrador",
+            "Liga o leitor de tela durante a instalação e depois de cada login, para quem precisa de acessibilidade.",
             (c, v) => c with { UseNarrator = v }),
 
         // Conta e rede
@@ -50,7 +49,8 @@ public static class Catalogo
         // Privacidade
         new(nameof(Configuration.DisableAppSuggestions), Categoria.Privacidade, "Desligar sugestões de apps",
             "Reduz sugestões, anúncios e apps instalados sem pedir.",
-            (c, v) => c with { DisableAppSuggestions = v }),
+            (c, v) => c with { DisableAppSuggestions = v },
+            Custo: "Também desativa o botão Gerenciar dispositivos, em Dispositivos móveis nas Configurações."),
         new(nameof(Configuration.DisableBingResults), Categoria.Privacidade, "Tirar o Bing da busca do Iniciar",
             "A pesquisa do Iniciar deixa de buscar na web.",
             (c, v) => c with { DisableBingResults = v }),
@@ -92,11 +92,11 @@ public static class Catalogo
 
         // Segurança
         new(nameof(Configuration.DisableWindowsUpdate), Categoria.Seguranca, "Pausar o Windows Update",
-            "Cria uma tarefa que renova a pausa de 7 dias a cada boot e todo dia, mantendo o Update parado.",
+            "Cria uma tarefa que tenta renovar a pausa de 7 dias a cada boot e todo dia.",
             (c, v) => c with { DisableWindowsUpdate = v },
-            Aviso.Risco, "Fica sem correções de segurança e sem drivers automáticos. Em um teste do Vega, a pausa sumiu sozinha em um notebook."),
+            Aviso.Risco, "Fica sem correções de segurança e sem drivers automáticos. Não conte com a pausa: em um notebook real, uma pausa feita só pelo registro sumiu sozinha."),
         new(nameof(Configuration.PreventAutomaticReboot), Categoria.Seguranca, "Não reiniciar sozinho após atualizar",
-            "Move as horas ativas a cada 4 horas para o Windows não reiniciar enquanto você usa.",
+            "Define políticas contra reiniciar com alguém conectado e move as horas ativas a cada 4 horas.",
             (c, v) => c with { PreventAutomaticReboot = v },
             Custo: "Deixa uma tarefa agendada rodando a cada 4 horas."),
         new(nameof(Configuration.DisableSmartScreen), Categoria.Seguranca, "Desligar o SmartScreen",
@@ -110,7 +110,7 @@ public static class Catalogo
         new(nameof(Configuration.DisableUac), Categoria.Seguranca, "Desligar o Controle de Conta de Usuário (UAC)",
             "Tira os pedidos de permissão de administrador.",
             (c, v) => c with { DisableUac = v },
-            Aviso.Risco, "Qualquer programa pode ganhar acesso de administrador sem avisar, e alguns apps deixam de abrir."),
+            Aviso.Risco, "Qualquer programa pode ganhar acesso de administrador sem avisar, e alguns apps deixam de abrir. Com conta Microsoft, as janelas do PIN do Windows Hello podem ficar escondidas."),
         new(nameof(Configuration.PreventDeviceEncryption), Categoria.Seguranca, "Impedir a criptografia automática do disco",
             "Evita que o BitLocker ligue sozinho e ganha um pouco de desempenho.",
             (c, v) => c with { PreventDeviceEncryption = v },
@@ -132,7 +132,8 @@ public static class Catalogo
             (c, v) => c with { HideTaskViewButton = v }),
         new(nameof(Configuration.ShowAllTrayIcons), Categoria.Interface, "Mostrar todos os ícones da bandeja",
             "Deixa os ícones sempre visíveis ao lado do relógio.",
-            (c, v) => c with { ShowAllTrayIcons = v }),
+            (c, v) => c with { ShowAllTrayIcons = v },
+            Custo: "No Windows 11, deixa uma tarefa agendada rodando em segundo plano."),
         new(nameof(Configuration.ShowEndTask), Categoria.Interface, "Finalizar tarefa na barra",
             "Adiciona \"Finalizar tarefa\" ao clicar com o botão direito em um app aberto.",
             (c, v) => c with { ShowEndTask = v }),
@@ -149,7 +150,8 @@ public static class Catalogo
         // Edge
         new(nameof(Configuration.MakeEdgeUninstallable), Categoria.Edge, "Permitir desinstalar o Edge",
             "Libera o botão de desinstalar nas Configurações. Não remove o Edge sozinho.",
-            (c, v) => c with { MakeEdgeUninstallable = v }),
+            (c, v) => c with { MakeEdgeUninstallable = v },
+            Aviso.Risco, "O autor do motor avisa que isso costuma dar problema com o Windows Update."),
         new(nameof(Configuration.DeleteEdgeDesktopIcon), Categoria.Edge, "Apagar o atalho do Edge",
             "Tira o ícone do Edge da área de trabalho.",
             (c, v) => c with { DeleteEdgeDesktopIcon = v }),
@@ -186,11 +188,11 @@ public static class Catalogo
             (c, v) => c with { DeleteJunctions = v },
             Aviso.Atencao, "Programas muito antigos podem depender desses caminhos."),
         new(nameof(Configuration.HidePowerShellWindows), Categoria.Avancado, "Esconder as janelas de script",
-            "Os scripts da instalação rodam sem abrir janela do PowerShell.",
+            "Os scripts da instalação rodam sem abrir janela do PowerShell, e ninguém fecha uma delas sem querer.",
             (c, v) => c with { HidePowerShellWindows = v },
-            Custo: "Fica mais difícil ver em que etapa a instalação está."),
+            Aviso.Atencao, "Fica mais difícil ver em que etapa a instalação está. Se um script seu pedir resposta no console, como Read-Host, a instalação fica parada."),
         new(nameof(Configuration.KeepSensitiveFiles), Categoria.Avancado, "Manter os arquivos de instalação",
-            "Não apaga o XML e os logs ao terminar. Útil para investigar problemas.",
+            "Não apaga o XML e o perfil de Wi-Fi ao terminar. Útil para investigar problemas.",
             (c, v) => c with { KeepSensitiveFiles = v },
             Aviso.Risco, "O XML pode conter senhas e chaves, e fica guardado no disco."),
     ];
@@ -282,7 +284,8 @@ public static class Catalogo
         new("Componentes XML", "componente xml unattend", Categoria.Avancado),
         new("AppLocker", "applocker politica bloquear", Categoria.Seguranca),
         new("Auditoria de processos", "auditoria processos linha comando", Categoria.Seguranca),
-        new("Salvar e abrir configuração", "salvar abrir importar exportar configuracao", Categoria.Avancado),
+        new("Salvar, abrir e compartilhar", "salvar abrir importar exportar configuracao link xml favorito", Categoria.Avancado),
+        new("Nome do arquivo gerado", "notautounattend autounattend nome arquivo pendrive", Categoria.Avancado),
     ];
 
     public static IReadOnlyList<OpcaoScript> OpcoesScript { get; } =
@@ -290,7 +293,7 @@ public static class Catalogo
         new("DisableDefender", Categoria.Seguranca, "Desligar o Microsoft Defender",
             "Desativa os serviços do antivírus antes do primeiro boot, enquanto a proteção dele ainda não está ativa.",
             e => e.DesligarDefender, (e, v) => e.DesligarDefender = v,
-            Aviso.Risco, "O computador fica sem antivírus. Em um teste do Vega, alguns serviços de monitoramento continuaram rodando."),
+            Aviso.Risco, "O computador fica sem antivírus. Em uma instalação de teste com o mesmo método, alguns serviços de monitoramento continuaram rodando."),
         new("PauseBeforeFormatting", Categoria.Disco, "Pausar antes de formatar",
             "Espera você apertar uma tecla antes de apagar o disco. É a última chance de desistir.",
             e => e.PausarAntesDeFormatar, (e, v) => e.PausarAntesDeFormatar = v),
@@ -352,7 +355,7 @@ public static class Catalogo
 
         // Utilitários
         new("RemoveNotepad", "Bloco de Notas (novo)", "Utilitários", Aviso.Atencao, "Sem ele, arquivos de texto ficam sem programa padrão."),
-        new("RemoveNotepadClassic", "Bloco de Notas (clássico)", "Utilitários"),
+        new("RemoveNotepadClassic", "Bloco de Notas (clássico)", "Utilitários", Aviso.Atencao, "O gerador original não mostra este item, e ele ainda não foi testado em uma instalação."),
         new("RemoveWordPad", "WordPad", "Utilitários"),
         new("RemoveCalculator", "Calculadora", "Utilitários"),
         new("RemoveClock", "Relógio", "Utilitários"),
@@ -389,4 +392,7 @@ public static class Catalogo
     ];
 
     public static IReadOnlyList<string> GruposApps { get; } = Apps.Select(a => a.Grupo).Distinct().ToList();
+
+    /// <summary>Os itens removíveis sem aviso nem custo anotado.</summary>
+    public static IEnumerable<ItemRemovivel> AppsSemAviso => Apps.Where(a => a.Aviso == Aviso.Nenhum && a.Custo is null);
 }

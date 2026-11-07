@@ -19,7 +19,7 @@
         }
     }
 
-    <Campo Titulo="Plano de energia" Descricao="Aplicado no primeiro login. Desempenho Máximo não existe em todos os computadores, e nesse caso usa Alto Desempenho.">
+    <Campo Titulo="Plano de energia" Descricao="Aplicado no primeiro login. Se Desempenho Máximo não existir, tenta Alto Desempenho. Alguns notebooks não têm nenhum dos dois e continuam em Equilibrado.">
         <select @bind="Estado.Energia" @bind:after="Mudou">
             <option value="@PlanoEnergia.Padrao">Padrão do Windows (Equilibrado)</option>
             <option value="@PlanoEnergia.AltoDesempenho">Alto Desempenho</option>

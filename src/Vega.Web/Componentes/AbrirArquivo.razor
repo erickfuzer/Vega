@@ -1,0 +1,42 @@
+@using Microsoft.AspNetCore.Components.Forms
+
+<label class="botao-mini arquivo-config" title="Abre um JSON salvo pelo Vega ou um XML do Vega ou do gerador original">
+    @Rotulo
+    <InputFile @key="tentativa" accept=".json,.xml,application/json,text/xml" OnChange="Abrir" />
+</label>
+@if (erro is not null)
+{
+    <p class="alerta risco" role="alert">@erro</p>
+}
+
+@code {
+    private const long TamanhoMaximo = 8 * 1024 * 1024;
+
+    private int tentativa;
+    private string? erro;
+
+    [Parameter] public string Rotulo { get; set; } = "Abrir arquivo";
+    [Parameter] public EventCallback<ConfiguracaoAberta> AoAbrir { get; set; }
+
+    private async Task Abrir(InputFileChangeEventArgs evento)
+    {
+        erro = null;
+        try
+        {
+            using var leitor = new StreamReader(evento.File.OpenReadStream(TamanhoMaximo));
+            var aberta = Compartilhamento.Abrir(await leitor.ReadToEndAsync());
+            await AoAbrir.InvokeAsync(aberta);
+        }
+        catch (FormatException falha)
+        {
+            erro = falha.Message;
+        }
+        catch (IOException)
+        {
+            erro = "Não foi possível ler o arquivo. Ele precisa ter menos de 8 MB.";
+        }
+
+        // Recria o campo para que escolher o mesmo arquivo de novo também funcione.
+        tentativa++;
+    }
+}

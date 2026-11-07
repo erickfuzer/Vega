@@ -59,9 +59,13 @@
             <option value="@ModoFixados.Personalizado">Personalizado (JSON)</option>
         </select>
     </Campo>
+    @if (Estado.FixadosIniciar == ModoFixados.Padrao && Estado.AppsRemovidos.Count > 0)
+    {
+        <p class="alerta atencao">Apps removidos podem continuar fixados no Iniciar, mesmo sem existir. Para evitar isso, escolha Vazio.</p>
+    }
     @if (Estado.FixadosIniciar == ModoFixados.Personalizado)
     {
-        <Campo Titulo="Lista de fixados (JSON)" Descricao="O formato da política ConfigureStartPins." Largo="true">
+        <Campo Titulo="Lista de fixados (JSON)" Descricao="Gerado pelo comando Export-StartLayout em outro Windows 11." Largo="true">
             <textarea rows="6" spellcheck="false" @bind="Estado.FixadosIniciarJson" @bind:after="Mudou"></textarea>
         </Campo>
     }
@@ -74,7 +78,7 @@
     </Campo>
     @if (Estado.BlocosIniciar == ModoFixados.Personalizado)
     {
-        <Campo Titulo="Layout dos blocos (XML)" Largo="true">
+        <Campo Titulo="Layout dos blocos (XML)" Descricao="Gerado pelo comando Export-StartLayout em outro Windows 10." Largo="true">
             <textarea rows="6" spellcheck="false" @bind="Estado.BlocosIniciarXml" @bind:after="Mudou"></textarea>
         </Campo>
     }

@@ -14,6 +14,7 @@ public static class ScriptsVega
     public const string RemoverEdge = """
         reg.exe add "HKLM\SOFTWARE\Microsoft\EdgeUpdate" /v DoNotUpdateToEdgeWithChromium /t REG_DWORD /d 1 /f;
         reg.exe add "HKLM\SOFTWARE\Policies\Microsoft\EdgeUpdate" /v "Install{56EB18F8-B008-4CBD-B6D2-8C97FE7E9062}" /t REG_DWORD /d 0 /f;
+        Get-AppxProvisionedPackage -Online | Where-Object -Property 'DisplayName' -EQ -Value 'Microsoft.MicrosoftEdge.Stable' | Remove-AppxProvisionedPackage -AllUsers -Online -ErrorAction 'Continue';
         $edge = 'C:\Program Files (x86)\Microsoft\Edge';
         $setup = Get-ChildItem -Path "$edge\Application\*\Installer\setup.exe" -ErrorAction 'SilentlyContinue' | Sort-Object -Property 'LastWriteTime' -Descending | Select-Object -First 1;
         if( $setup ) {

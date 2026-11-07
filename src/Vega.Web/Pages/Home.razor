@@ -1,6 +1,7 @@
 ﻿@page "/"
 @using System.Text
 @inject IJSRuntime JS
+@inject NavigationManager Navegacao
 
 <PageTitle>Vega: gerador de instalação do Windows</PageTitle>
 
@@ -27,11 +28,25 @@
             </button>
         }
     </div>
+    <p class="perfis-nota">Os perfis mantêm o idioma, a edição, o nome do computador e tudo o que você digitou, como contas e scripts. O resto volta ao padrão.</p>
+    <div class="partida arquivos">
+        <span class="partida-rotulo">Ou comece de:</span>
+        @foreach (var ponto in Perfis.Pontos)
+        {
+            <button type="button" class="botao-mini" title="@ponto.Descricao" @onclick="() => AplicarPonto(ponto)">@ponto.Nome</button>
+        }
+        <button type="button" class="botao-mini" title="Volta tudo ao padrão, inclusive o que você digitou" @onclick="LimparTudo">Limpar tudo</button>
+        <AbrirArquivo AoAbrir="AbrirConfiguracao" />
+    </div>
 </section>
 
 @if (erro is not null)
 {
     <p class="aviso-erro" role="alert">@erro</p>
+}
+@if (mensagem is not null)
+{
+    <p class="aviso-info" role="status">@mensagem</p>
 }
 
 <div class="corpo">
@@ -163,8 +178,8 @@
                         </label>
                         <label class="opcao @(estado.IgnorarRequisitos && estado.Modo == ModoInstalacao.TelaNormal ? "ligada" : "") @(estado.Modo != ModoInstalacao.TelaNormal ? "desativada" : "")">
                             <span class="opcao-titulo">Ignorar os requisitos do Windows 11</span>
-                            <span class="opcao-descricao">Permite instalar sem TPM, Secure Boot ou processador da lista oficial. No modo script, a verificação não acontece.</span>
-                            <input class="chave" type="checkbox" role="switch" disabled="@(estado.Modo != ModoInstalacao.TelaNormal)" @bind="estado.IgnorarRequisitos" />
+                            <span class="opcao-descricao">Permite instalar sem TPM, sem Secure Boot e com menos memória que o exigido. No modo script, a verificação não acontece.</span>
+                            <input class="chave" type="checkbox" role="switch" disabled="@(estado.Modo != ModoInstalacao.TelaNormal)" @bind="estado.IgnorarRequisitos" @bind:after="MarcarPersonalizado" />
                         </label>
                         @ListaOpcoes(Categoria.Instalacao)
                     </div>
@@ -201,7 +216,7 @@
                         <p class="alerta risco" role="alert">Seu script substitui toda essa etapa da instalação e pode apagar qualquer disco. O Vega não confere o que ele faz.</p>
                         <label class="campo campo-texto">
                             <span class="campo-titulo">Script do WinPE (.cmd)</span>
-                            <span class="campo-descricao">Lembre que o ambiente de instalação não tem findstr e outros comandos comuns.</span>
+                            <span class="campo-descricao">Precisa particionar, formatar, tornar o disco inicializável e copiar a imagem. O ambiente de instalação não tem findstr e costuma não ter PowerShell.</span>
                             <textarea rows="10" spellcheck="false" @bind="estado.ScriptInstalacao" @bind:after="MarcarPersonalizado"></textarea>
                         </label>
                     }
@@ -235,6 +250,10 @@
                                     <span class="campo-descricao">Precisa ter ASSIGN LETTER=W para o Windows e ASSIGN LETTER=S para o sistema.</span>
                                     <textarea rows="8" spellcheck="false" @bind="estado.ScriptDiskpart" @bind:after="MarcarPersonalizado"></textarea>
                                 </label>
+                                @if (estado.DiskpartApagaRecuperacao)
+                                {
+                                    <p class="alerta atencao">Sem uma partição de recuperação no script (SET ID=27, LABEL="Recovery" ou o ID GPT dela), o WinRE é apagado: sem reparo de inicialização e sem "Redefinir este PC".</p>
+                                }
                             }
 
                             @if (estado.Particoes == Particionamento.ApagarDisco)
@@ -262,7 +281,7 @@
                                 {
                                     <label class="campo campo-texto">
                                         <span class="campo-titulo">Script que escolhe o disco (VBScript)</span>
-                                        <span class="campo-descricao">Deve escrever o número do disco com WScript.Echo.</span>
+                                        <span class="campo-descricao">Deve escrever o número do disco com WScript.Echo. Em caso de erro, chame WScript.Quit 1 para a instalação parar sem apagar nada.</span>
                                         <textarea rows="6" spellcheck="false" @bind="estado.ScriptAlvoDisco" @bind:after="MarcarPersonalizado"></textarea>
                                     </label>
                                 }
@@ -295,7 +314,7 @@
                                     </label>
                                     <label class="opcao @(estado.CriterioTipoInterno ? "ligada" : "")">
                                         <span class="opcao-titulo">Só aceitar disco interno</span>
-                                        <span class="opcao-descricao">Recusa o que não for SATA ou NVMe, como pendrives.</span>
+                                        <span class="opcao-descricao">Recusa o que não for SATA, SCSI, SAS ou NVMe, como pendrives.</span>
                                         <input class="chave" type="checkbox" role="switch" @bind="estado.CriterioTipoInterno" @bind:after="MarcarPersonalizado" />
                                     </label>
                                     <label class="opcao @(estado.CriterioMidiaFixa ? "ligada" : "")">
@@ -342,7 +361,7 @@
                         <div class="lista">
                             <label class="campo">
                                 <span class="campo-titulo">Qual Windows instalar</span>
-                                <span class="campo-descricao">Pela edição, usa a escolhida em Instalação. Se lá estiver em perguntar, a instalação pergunta aqui também.</span>
+                                <span class="campo-descricao">Pela edição, usa a escolhida em Instalação, que precisa existir na sua ISO. Se lá estiver em perguntar, a instalação pergunta aqui também.</span>
                                 <select @bind="estado.Origem" @bind:after="MarcarPersonalizado">
                                     <option value="@OrigemImagem.Edicao">Pela edição (@NomeEdicao)</option>
                                     <option value="@OrigemImagem.Perguntar">Perguntar na hora</option>
@@ -405,12 +424,12 @@
                     <div class="lista">
                         @ListaOpcoesScript(Categoria.Seguranca)
                         @ListaOpcoes(Categoria.Seguranca)
-                        <SecaoSegurancaExtra Estado="estado" AoMudar="LimparErro" />
+                        <SecaoSegurancaExtra Estado="estado" AoMudar="MarcarPersonalizado" />
                     </div>
                     break;
 
                 case Categoria.Conta:
-                    <SecaoConta Estado="estado" Gerador="Gerador" AoMudar="LimparErro" />
+                    <SecaoConta Estado="estado" Gerador="Gerador" AoMudar="MarcarPersonalizado" />
                     <h3 class="grupo-titulo">Acesso</h3>
                     <div class="lista">
                         @ListaOpcoes(Categoria.Conta)
@@ -427,13 +446,13 @@
                     break;
 
                 case Categoria.Aparencia:
-                    <SecaoAparencia Estado="estado" AoMudar="LimparErro" />
+                    <SecaoAparencia Estado="estado" AoMudar="MarcarPersonalizado" />
                     break;
 
                 case Categoria.Edge:
                     <div class="lista">
                         <Interruptor Titulo="Remover o Edge por completo"
-                                     Descricao="Roda no primeiro login e bloqueia a reinstalação. Mantém o WebView2, que outros programas usam."
+                                     Descricao="Roda no primeiro login, pede ao Edge Update para não reinstalar e mantém o WebView2, que outros programas usam."
                                      Custo="O ícone pode ficar na barra por um tempo. Links do Windows feitos para abrir só no Edge podem parar de funcionar."
                                      Aviso="Aviso.Atencao"
                                      @bind-Valor="estado.RemoverEdge" @bind-Valor:after="MarcarPersonalizado" />
@@ -445,7 +464,7 @@
                     <div class="lista">
                         @ListaOpcoes(Categoria.Avancado)
                     </div>
-                    <SecaoAvancado Estado="estado" Gerador="Gerador" AoMudar="LimparErro" AoAbrir="AbrirConfiguracao" />
+                    <SecaoAvancado Estado="estado" Gerador="Gerador" AoMudar="MarcarPersonalizado" AoAbrir="AbrirConfiguracao" />
                     break;
 
                 case Categoria.Apps:
@@ -472,7 +491,7 @@
                         <label class="campo">
                             <span class="campo-titulo">Busca na barra de tarefas</span>
                             <span class="campo-descricao">Como a pesquisa aparece na barra.</span>
-                            <select @bind="estado.BuscaBarra">
+                            <select @bind="estado.BuscaBarra" @bind:after="MarcarPersonalizado">
                                 <option value="@TaskbarSearchMode.Box">Caixa de pesquisa</option>
                                 <option value="@TaskbarSearchMode.Label">Ícone com texto</option>
                                 <option value="@TaskbarSearchMode.Icon">Só o ícone</option>
@@ -482,7 +501,7 @@
                         <label class="campo">
                             <span class="campo-titulo">Arquivos ocultos</span>
                             <span class="campo-descricao">O que o Explorador mostra. Mostrar os do sistema faz aparecer o desktop.ini.</span>
-                            <select @bind="estado.ArquivosOcultos">
+                            <select @bind="estado.ArquivosOcultos" @bind:after="MarcarPersonalizado">
                                 <option value="@HideModes.Hidden">Esconder</option>
                                 <option value="@HideModes.HiddenSystem">Mostrar os ocultos, menos os do sistema</option>
                                 <option value="@HideModes.None">Mostrar tudo</option>
@@ -490,7 +509,7 @@
                         </label>
                         @ListaOpcoes(Categoria.Interface)
                     </div>
-                    <SecaoTeclado Estado="estado" AoMudar="LimparErro" />
+                    <SecaoTeclado Estado="estado" AoMudar="MarcarPersonalizado" />
                     break;
 
                 default:
@@ -514,13 +533,14 @@
     }
     <span class="capsula-info">@TotalAlteracoes @(TotalAlteracoes == 1 ? "alteração" : "alterações")</span>
     <button type="button" class="secundario" @onclick="VerXml">Ver XML</button>
+    <button type="button" class="secundario" title="Baixa o XML dentro de uma ISO, para conectar como CD em uma máquina virtual" @onclick="BaixarIso">ISO</button>
     <button type="button" class="principal" @onclick="Baixar">Baixar XML</button>
 </div>
 
 <dialog id="previa-xml" aria-labelledby="previa-titulo">
     <div class="dialogo-corpo">
         <div class="dialogo-topo">
-            <h2 id="previa-titulo">autounattend.xml</h2>
+            <h2 id="previa-titulo">@estado.NomeDoArquivo</h2>
             <button type="button" class="botao-mini" @onclick="Copiar">@(copiado ? "Copiado!" : "Copiar")</button>
             <button type="button" class="botao-mini" @onclick="FecharPrevia">Fechar</button>
         </div>
@@ -536,6 +556,7 @@
     private string? perfilAtivo = "padrao";
     private string temaAtual = "grafite";
     private string? erro;
+    private string? mensagem;
     private string previa = "";
     private bool copiado;
 
@@ -543,24 +564,78 @@
 
     private bool Buscando => !string.IsNullOrWhiteSpace(busca);
 
-    private int TotalAlteracoes => Enum.GetValues<Categoria>().Sum(estado.ContarAlteracoes);
+    private int TotalAlteracoes => estado.ContarAlteracoes();
 
     private string NomeEdicao => Gerador.WindowsEditions.TryGetValue(estado.Edicao, out var edicao)
         ? edicao.DisplayName
         : "perguntar";
 
-    private void LimparErro() => erro = null;
+    private void LimparErro()
+    {
+        erro = null;
+        mensagem = null;
+    }
 
     private void MarcarPersonalizado()
     {
         perfilAtivo = null;
-        erro = null;
+        LimparErro();
     }
 
-    private void AbrirConfiguracao(EstadoVega novo)
+    /// <summary>Um link do Vega traz a configuração depois do #, que nunca chega ao servidor.</summary>
+    protected override void OnInitialized()
     {
-        estado = novo;
+        var fragmento = new Uri(Navegacao.Uri).Fragment;
+        if (!fragmento.StartsWith(Compartilhamento.MarcaLink))
+        {
+            return;
+        }
+
+        try
+        {
+            estado = Compartilhamento.Decodificar(fragmento[Compartilhamento.MarcaLink.Length..]);
+            perfilAtivo = null;
+            mensagem = "Configuração aberta pelo link. " + Compartilhamento.AvisoSegredos;
+        }
+        catch (FormatException falha)
+        {
+            erro = falha.Message;
+        }
+    }
+
+    private async Task AbrirConfiguracao(ConfiguracaoAberta aberta)
+    {
+        estado = aberta.Estado;
         MarcarPersonalizado();
+        mensagem = aberta.Mensagem;
+        StateHasChanged();
+        await Task.Yield();
+        await JS.InvokeVoidAsync("vega.mostrar", ".aviso-info");
+    }
+
+    /// <summary>Começar do zero descarta o que foi digitado, então confirma se já houver algo mudado.</summary>
+    private async Task<bool> PodeDescartar() =>
+        estado.ContarAlteracoes() == 0
+        || await JS.InvokeAsync<bool>("confirm", "Isso descarta tudo o que você marcou e digitou. Continuar?");
+
+    private async Task AplicarPonto(PontoDePartida ponto)
+    {
+        if (await PodeDescartar())
+        {
+            estado = ponto.Criar();
+            MarcarPersonalizado();
+            mensagem = $"{ponto.Nome}: {ponto.Descricao}";
+        }
+    }
+
+    private async Task LimparTudo()
+    {
+        if (await PodeDescartar())
+        {
+            estado = new EstadoVega();
+            LimparErro();
+            perfilAtivo = "padrao";
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool primeiraVez)
@@ -590,7 +665,7 @@
     {
         perfil.Aplicar(estado);
         perfilAtivo = perfil.Id;
-        erro = null;
+        LimparErro();
     }
 
     private void AlternarOpcao(Opcao opcao, bool ligada)
@@ -607,7 +682,7 @@
 
     private void MarcarAppsSemAviso()
     {
-        estado.AppsRemovidos.UnionWith(Catalogo.Apps.Where(a => a.Aviso == Aviso.Nenhum).Select(a => a.Id));
+        estado.AppsRemovidos.UnionWith(Catalogo.AppsSemAviso.Select(a => a.Id));
         MarcarPersonalizado();
     }
 
@@ -628,11 +703,12 @@
         }
         catch (ConfigurationException falha)
         {
-            erro = $"Essa combinação não pode ser gerada. {ErrosDoMotor.Traduzir(falha.Message)}";
+            erro = $"Corrija antes de gerar: {ErrosDoMotor.Traduzir(falha.Message)}";
         }
-        catch (Exception falha)
+        catch (Exception)
         {
-            erro = $"Não foi possível gerar o arquivo: {falha.Message}";
+            // No site publicado, as mensagens do .NET vêm sem texto, só com o nome interno.
+            erro = "Não foi possível gerar o arquivo com essa combinação. Confira os campos preenchidos, principalmente os de XML e de script.";
         }
         return null;
     }
@@ -641,7 +717,16 @@
     {
         if (Gerar() is { } bytes)
         {
-            await JS.InvokeVoidAsync("vega.baixar", "autounattend.xml", bytes);
+            await JS.InvokeVoidAsync("vega.baixar", estado.NomeDoArquivo, bytes);
+        }
+    }
+
+    private async Task BaixarIso()
+    {
+        if (Gerar() is { } bytes)
+        {
+            var nome = Path.ChangeExtension(estado.NomeDoArquivo, "iso");
+            await JS.InvokeVoidAsync("vega.baixar", nome, GeradorIso.Criar(estado.NomeDoArquivo, bytes));
         }
     }
 

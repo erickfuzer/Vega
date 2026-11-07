@@ -3,9 +3,9 @@
     <Interruptor Titulo="Adicionar um segundo teclado" Descricao="Fica disponível na barra de idioma do Windows." Desativado="@Estado.EscolherIdiomaNaInstalacao" @bind-Valor="Estado.UsarTeclado2" @bind-Valor:after="Mudou" />
     @if (Estado.UsarTeclado2 && !Estado.EscolherIdiomaNaInstalacao)
     {
-        <Campo Titulo="Segundo formato regional">
+        <Campo Titulo="Segundo idioma">
             <select @bind="Estado.IdiomaRegional2" @bind:after="Mudou">
-                @foreach (var item in Gerador.UserLocales.Values.OrderBy(i => i.DisplayName))
+                @foreach (var item in IdiomasAdicionais)
                 {
                     <option value="@item.Id">@item.DisplayName</option>
                 }
@@ -22,9 +22,9 @@
         <Interruptor Titulo="Adicionar um terceiro teclado" @bind-Valor="Estado.UsarTeclado3" @bind-Valor:after="Mudou" />
         @if (Estado.UsarTeclado3)
         {
-            <Campo Titulo="Terceiro formato regional">
+            <Campo Titulo="Terceiro idioma">
                 <select @bind="Estado.IdiomaRegional3" @bind:after="Mudou">
-                    @foreach (var item in Gerador.UserLocales.Values.OrderBy(i => i.DisplayName))
+                    @foreach (var item in IdiomasAdicionais)
                     {
                         <option value="@item.Id">@item.DisplayName</option>
                     }
@@ -44,7 +44,7 @@
 
 <h3 class="grupo-titulo">Edição e licença</h3>
 <div class="lista">
-    <Campo Titulo="Edição do Windows" Descricao="Precisa bater com a licença da máquina para ativar sozinha.">
+    <Campo Titulo="Edição do Windows" Descricao="Precisa existir na sua ISO e bater com a licença da máquina para ativar sozinha.">
         <select @bind="Estado.Edicao" @bind:after="Mudou">
             <option value="">Perguntar na instalação</option>
             <option value="@EstadoVega.EdicaoFirmware">Usar a chave gravada na placa-mãe</option>
@@ -94,6 +94,9 @@
     [Parameter, EditorRequired] public EstadoVega Estado { get; set; } = default!;
     [Parameter, EditorRequired] public UnattendGenerator Gerador { get; set; } = default!;
     [Parameter] public EventCallback AoMudar { get; set; }
+
+    /// <summary>Idiomas sem código próprio do Windows viram outro idioma no XML, por isso o site original também os esconde aqui.</summary>
+    private IEnumerable<UserLocale> IdiomasAdicionais => Gerador.UserLocales.Values.Where(i => i.LCID != "1000").OrderBy(i => i.DisplayName);
 
     private Task Mudou() => AoMudar.InvokeAsync();
 

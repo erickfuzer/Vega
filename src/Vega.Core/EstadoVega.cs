@@ -1,7 +1,13 @@
 using System.Collections.Immutable;
 using System.Drawing;
+using System.Text.RegularExpressions;
+using System.Xml;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Linq;
 using Schneegans.Unattend;
+using BindingFlags = System.Reflection.BindingFlags;
+using Formatting = Newtonsoft.Json.Formatting;
 
 namespace Vega.Core;
 
@@ -92,7 +98,7 @@ public sealed class EstadoVega
     public LoginAutomatico Login { get; set; } = LoginAutomatico.PrimeiraConta;
     public string SenhaAdministrador { get; set; } = "";
     public bool OcultarSenhas { get; set; } = true;
-    public ModoExpiracao Expiracao { get; set; } = ModoExpiracao.Padrao;
+    public ModoExpiracao Expiracao { get; set; } = ModoExpiracao.Nunca;
     public int ExpiracaoDias { get; set; } = DefaultPasswordExpirationSettings.MaxAge;
     public ModoBloqueio Bloqueio { get; set; } = ModoBloqueio.Padrao;
     public int BloqueioTentativas { get; set; } = 10;
@@ -168,6 +174,9 @@ public sealed class EstadoVega
     public bool ReiniciarExplorador { get; set; }
     public List<ComponenteXml> Componentes { get; set; } = [];
 
+    /// <summary>Com esse nome, o Windows não acha o arquivo sozinho e o pendrive não inicia a instalação.</summary>
+    public bool NomeSemAutoInstalar { get; set; }
+
     // Disco e imagem
     public ModoInstalacao Modo { get; set; } = ModoInstalacao.TelaNormal;
     public string ScriptInstalacao { get; set; } = "";
@@ -212,29 +221,52 @@ public sealed class EstadoVega
     [JsonIgnore]
     public bool ApagaSemPerguntar =>
         Modo == ModoInstalacao.Script
-        && Particoes != Particionamento.AMao
-        && Alvo != AlvoDisco.Perguntar
-        && !PausarAntesDeFormatar;
+        && !PausarAntesDeFormatar
+        && (Particoes == Particionamento.ScriptDiskpart
+            || (Particoes == Particionamento.ApagarDisco && Alvo != AlvoDisco.Perguntar));
 
-    /// <summary>Volta o que os perfis mudam ao estado inicial, mantendo idioma, conta e nomes.</summary>
+    /// <summary>Palavras que o motor procura no script do diskpart para saber se ele cria a recuperação.</summary>
+    private static readonly string[] PistasDeRecuperacao = ["SET ID=27", "LABEL=\"Recovery\"", "SET ID=\"de94bba4-06d1-4d40-a16a-bfd50179d6ac\""];
+
+    /// <summary>Verdadeiro quando o motor vai apagar o WinRE porque o script do diskpart não cria a partição dele.</summary>
+    [JsonIgnore]
+    public bool DiskpartApagaRecuperacao =>
+        Modo == ModoInstalacao.Script
+        && Particoes == Particionamento.ScriptDiskpart
+        && !PistasDeRecuperacao.Any(pista => ScriptDiskpart.Contains(pista, StringComparison.OrdinalIgnoreCase));
+
+    [JsonIgnore]
+    public string NomeDoArquivo => NomeSemAutoInstalar ? "notautounattend.xml" : "autounattend.xml";
+
+    /// <summary>O que não muda ao trocar de perfil: idioma, edição, identidade da máquina e todo texto digitado.</summary>
+    private static readonly HashSet<string> MantidosPelosPerfis =
+    [
+        nameof(EscolherIdiomaNaInstalacao), nameof(IdiomaImagem), nameof(IdiomaRegional), nameof(Teclado), nameof(Regiao),
+        nameof(UsarTeclado2), nameof(IdiomaRegional2), nameof(Teclado2), nameof(UsarTeclado3), nameof(IdiomaRegional3), nameof(Teclado3),
+        nameof(Edicao), nameof(ChaveProduto), nameof(UsarChaveAtivacao), nameof(ChaveAtivacao), nameof(Arquiteturas),
+        nameof(Contas), nameof(Login), nameof(SenhaAdministrador), nameof(OcultarSenhas),
+        nameof(NomeComputadorModo), nameof(NomeComputador), nameof(ScriptNomeComputador), nameof(FusoHorario),
+        nameof(WifiNome), nameof(WifiSenha), nameof(WifiAutenticacao), nameof(WifiConectarSozinho), nameof(WifiOculta), nameof(WifiXml),
+        nameof(ScriptInstalacao), nameof(ScriptDiskpart), nameof(ScriptAlvoDisco), nameof(ScriptPapel), nameof(ScriptTelaBloqueio),
+        nameof(FixadosIniciarJson), nameof(BlocosIniciarXml), nameof(IconesBarraXml), nameof(AppLockerXml),
+        nameof(Scripts), nameof(Componentes), nameof(NomeSemAutoInstalar),
+    ];
+
+    private static IEnumerable<System.Reflection.PropertyInfo> CamposGravaveis =>
+        typeof(EstadoVega).GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(p => p.CanWrite);
+
+    /// <summary>Volta tudo ao padrão, menos o que <see cref="MantidosPelosPerfis"/> lista.</summary>
     public void Limpar()
     {
-        OpcoesLigadas.Clear();
-        AppsRemovidos.Clear();
-        Modo = ModoInstalacao.TelaNormal;
-        Particoes = Particionamento.ApagarDisco;
-        Alvo = AlvoDisco.Perguntar;
-        Recuperacao = RecoveryMode.Partition;
-        DesligarDefender = false;
-        DesligarNomes8Dot3 = false;
-        PausarAntesDeFormatar = true;
-        PausarAntesDeReiniciar = false;
-        CompactarWindows = false;
-        VerificarImagem = true;
-        Efeitos = ModoEfeitos.Padrao;
-        Energia = PlanoEnergia.Padrao;
-        RemoverEdge = false;
+        var padrao = new EstadoVega();
+        foreach (var campo in CamposGravaveis.Where(p => !MantidosPelosPerfis.Contains(p.Name)))
+        {
+            campo.SetValue(this, campo.GetValue(padrao));
+        }
     }
+
+    /// <summary>Quantos ajustes fogem do padrão, somando todas as categorias.</summary>
+    public int ContarAlteracoes() => Enum.GetValues<Categoria>().Sum(ContarAlteracoes);
 
     /// <summary>Quantos ajustes fogem do padrão em uma categoria, para o contador da tela.</summary>
     public int ContarAlteracoes(Categoria categoria)
@@ -248,24 +280,32 @@ public sealed class EstadoVega
         return opcoes + categoria switch
         {
             Categoria.Instalacao => Contar(
+                EscolherIdiomaNaInstalacao,
                 UsarTeclado2 && !EscolherIdiomaNaInstalacao,
+                UsarTeclado2 && UsarTeclado3 && !EscolherIdiomaNaInstalacao,
                 !string.IsNullOrEmpty(Edicao),
                 UsarChaveAtivacao,
+                !IgnorarRequisitos && Modo == ModoInstalacao.TelaNormal,
                 !Arquiteturas.SetEquals([ProcessorArchitecture.amd64])),
-            Categoria.Disco => Contar(Modo != ModoInstalacao.TelaNormal),
+            Categoria.Disco => Contar(Modo != ModoInstalacao.TelaNormal, UsarConfigurationSet && Modo == ModoInstalacao.TelaNormal),
             Categoria.Seguranca => Contar(
                 Modo == ModoInstalacao.Script && DesligarDefender,
                 AuditarProcessos,
                 UsarAppLocker),
             Categoria.Conta => Contar(
                 Conta != TipoConta.Local,
-                Expiracao != ModoExpiracao.Padrao,
+                Expiracao != ModoExpiracao.Nunca,
                 Bloqueio != ModoBloqueio.Padrao,
                 NomeComputadorModo != ModoNomeComputador.Aleatorio,
                 !string.IsNullOrEmpty(FusoHorario),
-                Wifi != ModoWifi.Pular),
+                Wifi != ModoWifi.Pular,
+                Privacidade != ExpressSettingsMode.DisableAll),
             Categoria.Desempenho => Contar(Efeitos != ModoEfeitos.Padrao, Energia != PlanoEnergia.Padrao),
-            Categoria.Interface => Contar(ConfigurarTeclas, Aderencia != ModoAderencia.Padrao),
+            Categoria.Interface => Contar(
+                ConfigurarTeclas,
+                Aderencia != ModoAderencia.Padrao,
+                BuscaBarra != TaskbarSearchMode.Box,
+                ArquivosOcultos != HideModes.Hidden),
             Categoria.Aparencia => Contar(
                 PersonalizarCores,
                 Papel != ModoPapel.Padrao,
@@ -276,28 +316,137 @@ public sealed class EstadoVega
                 PersonalizarIconesArea,
                 PersonalizarPastasIniciar),
             Categoria.Edge => Contar(RemoverEdge),
-            Categoria.Avancado => Scripts.Count + Componentes.Count + Contar(ReiniciarExplorador),
+            Categoria.Avancado =>
+                Scripts.Count(s => !string.IsNullOrWhiteSpace(s.Conteudo))
+                + Componentes.Count(c => !string.IsNullOrWhiteSpace(c.Xml))
+                + Contar(ReiniciarExplorador, NomeSemAutoInstalar),
             _ => 0,
         };
     }
 
     private static int Contar(params bool[] ajustes) => ajustes.Count(a => a);
 
-    /// <summary>A configuração em JSON. Pode conter senhas e chaves digitadas.</summary>
-    public string Exportar() => JsonConvert.SerializeObject(this, Formatting.Indented);
+    private static readonly JsonSerializerSettings ConfiguracaoJson = new()
+    {
+        ObjectCreationHandling = ObjectCreationHandling.Replace,
+        Converters = [new StringEnumConverter()],
+    };
 
-    public static EstadoVega Importar(string json) =>
-        JsonConvert.DeserializeObject<EstadoVega>(json, new JsonSerializerSettings { ObjectCreationHandling = ObjectCreationHandling.Replace })
-        ?? throw new JsonException("O arquivo está vazio.");
+    /// <summary>A configuração em JSON. Pode conter senhas e chaves digitadas.</summary>
+    public string Exportar() => JsonConvert.SerializeObject(this, Formatting.Indented, ConfiguracaoJson);
+
+    internal JObject ParaJson() => JObject.FromObject(this, JsonSerializer.Create(ConfiguracaoJson));
+
+    /// <summary>Abre um arquivo salvo por <see cref="Exportar"/>. Recusa um JSON que não seja do Vega.</summary>
+    public static EstadoVega Importar(string json)
+    {
+        var objeto = JObject.Parse(json);
+        if (!objeto.ContainsKey(nameof(OpcoesLigadas)) || !objeto.ContainsKey(nameof(AppsRemovidos)))
+        {
+            throw new JsonException("Esse JSON não é uma configuração do Vega.");
+        }
+
+        return DeJson(objeto);
+    }
+
+    /// <summary>Monta um estado a partir do padrão e do que veio no JSON, que pode ter sido editado à mão.</summary>
+    internal static EstadoVega DeJson(JObject objeto)
+    {
+        var estado = new EstadoVega();
+        JsonConvert.PopulateObject(objeto.ToString(Formatting.None), estado, ConfiguracaoJson);
+        estado.Sanear();
+        return estado;
+    }
+
+    /// <summary>A tela não espera nulos nem valores fora dos enums, e um JSON editado à mão pode trazer os dois.</summary>
+    private void Sanear()
+    {
+        var padrao = new EstadoVega();
+        foreach (var campo in CamposGravaveis)
+        {
+            var valor = campo.GetValue(this);
+            if (valor is null && Nullable.GetUnderlyingType(campo.PropertyType) is null)
+            {
+                campo.SetValue(this, campo.GetValue(padrao));
+            }
+            else if (campo.PropertyType.IsEnum && !Enum.IsDefined(campo.PropertyType, valor!))
+            {
+                throw new JsonException($"O valor de {campo.Name} é inválido.");
+            }
+        }
+
+        OpcoesLigadas.RemoveWhere(item => item is null);
+        AppsRemovidos.RemoveWhere(item => item is null);
+        IconesArea.RemoveWhere(item => item is null);
+        PastasIniciar.RemoveWhere(item => item is null);
+
+        Contas.RemoveAll(item => item is null);
+        foreach (var conta in Contas)
+        {
+            conta.Nome ??= "";
+            conta.NomeExibido ??= "";
+            conta.Senha ??= "";
+            conta.Grupo ??= Constants.UsersGroup;
+        }
+
+        Scripts.RemoveAll(item => item is null);
+        foreach (var script in Scripts)
+        {
+            script.Conteudo ??= "";
+            if (!Enum.IsDefined(script.Fase) || !Enum.IsDefined(script.Tipo))
+            {
+                throw new JsonException("Um script tem etapa ou tipo inválido.");
+            }
+        }
+
+        Componentes.RemoveAll(item => item is null);
+        foreach (var componente in Componentes)
+        {
+            componente.Componente ??= "";
+            componente.Xml ??= "";
+            if (!Enum.IsDefined(componente.Fase))
+            {
+                throw new JsonException("Um componente tem etapa inválida.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Componentes e etapas que o motor já preencheu. Um XML próprio neles substitui o que foi gerado,
+    /// o que pode tirar scripts, contas ou o nome do computador. Vazio se a configuração ainda não gera.
+    /// </summary>
+    public IReadOnlySet<(string Componente, Pass Fase)> ComponentesJaUsados(UnattendGenerator gerador)
+    {
+        var usados = new HashSet<(string, Pass)>();
+        try
+        {
+            var documento = gerador.GenerateXml(Montar(gerador) with { Components = ImmutableDictionary<ComponentAndPass, string>.Empty });
+            var espacos = new XmlNamespaceManager(documento.NameTable);
+            espacos.AddNamespace("u", "urn:schemas-microsoft-com:unattend");
+            foreach (var etapa in documento.SelectNodes("/u:unattend/u:settings", espacos)!.Cast<XmlElement>())
+            {
+                if (!Enum.TryParse<Pass>(etapa.GetAttribute("pass"), out var fase))
+                {
+                    continue;
+                }
+
+                foreach (var componente in etapa.SelectNodes("u:component", espacos)!.Cast<XmlElement>().Where(c => c.HasChildNodes))
+                {
+                    usados.Add((componente.GetAttribute("name"), fase));
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // Este resultado só alimenta um aviso. O erro de verdade aparece ao gerar o XML.
+            usados.Clear();
+        }
+
+        return usados;
+    }
 
     public Configuration Montar(UnattendGenerator gerador)
     {
-        var repetido = Componentes.GroupBy(c => (c.Componente, c.Fase)).FirstOrDefault(g => g.Count() > 1);
-        if (repetido is not null)
-        {
-            throw new ConfigurationException($"O componente {repetido.Key.Componente} aparece mais de uma vez na etapa {repetido.Key.Fase}. Junte o XML em um só.");
-        }
-
         var config = Configuration.Default with
         {
             LanguageSettings = MontarIdioma(gerador),
@@ -336,7 +485,9 @@ public sealed class EstadoVega
             },
             AppLockerSettings = UsarAppLocker ? new ConfigureAppLockerSettings(AppLockerXml) : new SkipAppLockerSettings(),
             ProcessorArchitectures = [.. Arquiteturas],
-            Components = Componentes.ToImmutableDictionary(c => new ComponentAndPass(c.Componente, c.Fase), c => c.Xml),
+            Components = Componentes
+                .Where(c => !string.IsNullOrWhiteSpace(c.Xml))
+                .ToImmutableDictionary(c => new ComponentAndPass(c.Componente, c.Fase), c => c.Xml),
             Bloatwares = AppsRemovidos.Select(gerador.Lookup<Bloatware>).ToImmutableList(),
             ExpressSettings = Privacidade,
             ScriptSettings = new ScriptSettings(MontarScripts(), ReiniciarExplorador),
@@ -410,8 +561,62 @@ public sealed class EstadoVega
         return config;
     }
 
-    public byte[] GerarXml(UnattendGenerator gerador) =>
-        UnattendGenerator.Serialize(gerador.GenerateXml(Montar(gerador)));
+    public byte[] GerarXml(UnattendGenerator gerador)
+    {
+        var problemas = Validacao.Problemas(this, gerador);
+        if (problemas.Count > 0)
+        {
+            throw new ConfigurationException(string.Join(" ", problemas));
+        }
+
+        var documento = gerador.GenerateXml(Montar(gerador));
+        CorrigirRotulosDoPe(documento);
+        documento.DocumentElement!.PrependChild(documento.CreateComment(Compartilhamento.Link(this)));
+        return UnattendGenerator.Serialize(documento);
+    }
+
+    /// <summary>
+    /// Contorna um bug do motor: quando o disco e a imagem são perguntados na hora, o pe.cmd ganha
+    /// dois rótulos :choice. Enter em branco na imagem volta para a pergunta do disco e o diskpart
+    /// roda de novo, e Enter em branco no disco pula o particionamento. O novo nome tem o mesmo
+    /// tamanho, para não estourar o limite de caracteres de cada linha.
+    /// </summary>
+    private void CorrigirRotulosDoPe(XmlDocument documento)
+    {
+        // Só o script gerado pelo motor. Um script escrito pela pessoa fica como ela escreveu.
+        if (Modo != ModoInstalacao.Script)
+        {
+            return;
+        }
+
+        var espacos = new XmlNamespaceManager(documento.NameTable);
+        espacos.AddNamespace("u", "urn:schemas-microsoft-com:unattend");
+        Trocar(documento.SelectNodes("/u:unattend/u:settings[@pass='windowsPE']//u:Path", espacos)!.Cast<XmlNode>());
+
+        // O motor também grava uma cópia do script, só para consulta, que precisa continuar igual.
+        if (documento.SelectSingleNode("//*[local-name()='PEScriptCopy']") is { } copia)
+        {
+            Trocar([copia]);
+        }
+
+        static void Trocar(IEnumerable<XmlNode> nos)
+        {
+            var rotulos = 0;
+            var saltos = 0;
+            foreach (var no in nos.ToList())
+            {
+                var novo = Regex.Replace(no.InnerText, @"(?m)(?:echo:|^[ \t]*):choice\b|goto :choice\b", achado =>
+                {
+                    var ordem = achado.Value.StartsWith("goto") ? ++saltos : ++rotulos;
+                    return ordem < 2 ? achado.Value : achado.Value.Replace(":choice", ":imagem");
+                });
+                if (novo != no.InnerText)
+                {
+                    no.InnerText = novo;
+                }
+            }
+        }
+    }
 
     private ILanguageSettings MontarIdioma(UnattendGenerator gerador)
     {
@@ -428,7 +633,7 @@ public sealed class EstadoVega
             ImageLanguage: gerador.Lookup<ImageLanguage>(IdiomaImagem),
             LocaleAndKeyboard: Par(IdiomaRegional, Teclado),
             LocaleAndKeyboard2: UsarTeclado2 ? Par(IdiomaRegional2, Teclado2) : null,
-            LocaleAndKeyboard3: UsarTeclado3 ? Par(IdiomaRegional3, Teclado3) : null,
+            LocaleAndKeyboard3: UsarTeclado2 && UsarTeclado3 ? Par(IdiomaRegional3, Teclado3) : null,
             GeoLocation: gerador.Lookup<GeoLocation>(Regiao));
     }
 
@@ -449,7 +654,10 @@ public sealed class EstadoVega
 
     private List<Script> MontarScripts()
     {
-        var lista = Scripts.Select(s => new Script(s.Conteudo, s.Fase, s.Tipo)).ToList();
+        var lista = Scripts
+            .Where(s => !string.IsNullOrWhiteSpace(s.Conteudo))
+            .Select(s => new Script(s.Conteudo, s.Fase, s.Tipo))
+            .ToList();
         if (RemoverEdge)
         {
             lista.Add(new Script(ScriptsVega.RemoverEdge, ScriptPhase.FirstLogon, ScriptType.Ps1));

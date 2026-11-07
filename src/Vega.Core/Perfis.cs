@@ -5,6 +5,9 @@ namespace Vega.Core;
 /// <summary>Um ponto de partida. Depois de aplicar, a pessoa pode mudar qualquer opção.</summary>
 public sealed record Perfil(string Id, string Nome, string Descricao, Action<EstadoVega> Aplicar);
 
+/// <summary>Um atalho do gerador original: começa do zero, sem manter nada do que estava marcado.</summary>
+public sealed record PontoDePartida(string Id, string Nome, string Descricao, Func<EstadoVega> Criar);
+
 public static class Perfis
 {
     private static readonly string[] OpcoesDiaADia =
@@ -37,7 +40,6 @@ public static class Perfis
         nameof(Configuration.DisableLastAccess),
         nameof(Configuration.DisableWpbt),
         nameof(Configuration.TurnOffSystemSounds),
-        nameof(Configuration.MakeEdgeUninstallable),
         nameof(Configuration.DeleteJunctions),
         nameof(Configuration.HideInfoTip),
         nameof(Configuration.HideTaskViewButton),
@@ -57,7 +59,32 @@ public static class Perfis
     /// <summary>Continuam mesmo no perfil máximo, porque quase todo mundo sente falta deles.</summary>
     private static readonly HashSet<string> AppsMantidosNoMaximo =
     [
-        "RemoveNotepad", "RemoveCalculator", "RemoveSnippingTool", "RemovePhotos", "RemoveWindowsTerminal",
+        "RemoveNotepad", "RemoveNotepadClassic", "RemoveCalculator", "RemoveSnippingTool", "RemovePhotos", "RemoveWindowsTerminal",
+    ];
+
+    /// <summary>O XML que o motor gera sem nenhuma escolha, em que a instalação pergunta quase tudo.</summary>
+    private static EstadoVega Minimo() => new()
+    {
+        EscolherIdiomaNaInstalacao = true,
+        Conta = TipoConta.Microsoft,
+        Wifi = ModoWifi.Perguntar,
+        Expiracao = ModoExpiracao.Padrao,
+    };
+
+    public static IReadOnlyList<PontoDePartida> Pontos { get; } =
+    [
+        new("usuario-local", "Só um usuário local",
+            "A instalação pergunta idioma, edição e usuário. O XML só pula a conta Microsoft e a tela de rede.",
+            () =>
+            {
+                var estado = Minimo();
+                estado.Conta = TipoConta.Local;
+                estado.Wifi = ModoWifi.Pular;
+                return estado;
+            }),
+        new("minimo", "Saída mínima",
+            "O menor XML possível: a instalação pergunta quase tudo, como no Windows sem nenhum ajuste.",
+            Minimo),
     ];
 
     public static IReadOnlyList<Perfil> Todos { get; } =
@@ -72,6 +99,8 @@ public static class Perfis
                 estado.Limpar();
                 estado.OpcoesLigadas.UnionWith(OpcoesDiaADia);
                 estado.AppsRemovidos.UnionWith(AppsDiaADia);
+                estado.FixadosIniciar = ModoFixados.Vazio;
+                estado.BlocosIniciar = ModoFixados.Vazio;
             }),
         new("maximo", "Remoção máxima",
             "Para máquinas de teste: desliga o Defender, remove quase tudo e apaga o disco que você escolher. Leia os avisos antes de usar.",
@@ -88,6 +117,8 @@ public static class Perfis
                 estado.Efeitos = ModoEfeitos.Desempenho;
                 estado.Energia = PlanoEnergia.AltoDesempenho;
                 estado.RemoverEdge = true;
+                estado.FixadosIniciar = ModoFixados.Vazio;
+                estado.BlocosIniciar = ModoFixados.Vazio;
             }),
     ];
 }

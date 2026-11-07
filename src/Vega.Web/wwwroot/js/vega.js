@@ -1,6 +1,6 @@
 window.vega = {
     baixar: function (nome, bytes) {
-        var blob = new Blob([bytes], { type: 'application/xml' });
+        var blob = new Blob([bytes], { type: 'application/octet-stream' });
         var url = URL.createObjectURL(blob);
         var link = document.createElement('a');
         link.href = url;
@@ -35,5 +35,10 @@ window.vega = {
     fecharDialogo: function (id) {
         var dialogo = document.getElementById(id);
         if (dialogo) dialogo.close();
+    },
+
+    mostrar: function (seletor) {
+        var elemento = document.querySelector(seletor);
+        if (elemento) elemento.scrollIntoView({ block: 'center' });
     }
 };
