@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Vega.Core/Vega.Core.csproj" />
+    <Project Path="src/Vega.Web/Vega.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Vega.Tests/Vega.Tests.csproj" />
+  </Folder>
+  <Folder Name="/vendor/" />
+  <Folder Name="/vendor/unattend-generator/">
+    <Project Path="vendor/unattend-generator/UnattendGenerator.csproj" />
+  </Folder>
+</Solution>

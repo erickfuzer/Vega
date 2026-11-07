@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vega: gerador de instalação do Windows</title>
+    <meta name="description" content="Monte um autounattend.xml para uma instalação limpa do Windows, com todas as opções organizadas e tudo rodando no seu navegador." />
+    <meta name="theme-color" content="#0D0F13" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Vega: gerador de instalação do Windows" />
+    <meta property="og:description" content="Todas as opções organizadas, com o custo de cada uma. Tudo roda no seu navegador." />
+    <meta property="og:url" content="https://erickfuzer.github.io/Vega/" />
+    <base href="/" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preload" id="webassembly" />
+    <link rel="stylesheet" href="css/app.css" />
+    <script>
+        // Antes de pintar: sem isso, quem prefere o tema escuro veria um clarão branco.
+        (function () {
+            var salvo = null;
+            try { salvo = localStorage.getItem('vega-tema'); } catch (e) { }
+            document.documentElement.dataset.theme = salvo || (matchMedia('(prefers-color-scheme: light)').matches ? 'claro' : 'grafite');
+        })();
+    </script>
+    <script type="importmap"></script>
+</head>
+
+<body>
+    <div id="app">
+        <div class="carregando" role="status">
+            <svg viewBox="0 0 24 24" width="44" height="44" aria-hidden="true"><path d="M12 1.5c.7 6.1 4.4 9.8 10.5 10.5-6.1.7-9.8 4.4-10.5 10.5C11.3 16.4 7.6 12.7 1.5 12 7.6 11.3 11.3 7.6 12 1.5Z" fill="currentColor" /></svg>
+            <strong>Vega</strong>
+            <span class="carregando-texto"></span>
+            <noscript>O Vega precisa de JavaScript para gerar o arquivo no seu navegador.</noscript>
+        </div>
+    </div>
+
+    <div id="blazor-error-ui">
+        Algo deu errado.
+        <a href="." class="reload">Recarregar</a>
+        <button type="button" class="dismiss" aria-label="Fechar">×</button>
+    </div>
+    <script src="js/vega.js"></script>
+    <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+</body>
+
+</html>

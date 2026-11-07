@@ -1,0 +1,3 @@
+[submodule "vendor/unattend-generator"]
+	path = vendor/unattend-generator
+	url = https://github.com/cschneegans/unattend-generator.git

@@ -1,0 +1,414 @@
+﻿@page "/"
+@using System.Text
+@inject IJSRuntime JS
+
+<PageTitle>Vega: gerador de instalação do Windows</PageTitle>
+
+<header class="topo">
+    <a class="marca" href=".">
+        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M12 1.5c.7 6.1 4.4 9.8 10.5 10.5-6.1.7-9.8 4.4-10.5 10.5C11.3 16.4 7.6 12.7 1.5 12 7.6 11.3 11.3 7.6 12 1.5Z" fill="currentColor" /></svg>
+        <strong>Vega</strong>
+    </a>
+    <div class="topo-acoes">
+        <button type="button" class="botao-leve" @onclick="AlternarTema">@(temaAtual == "claro" ? "Tema grafite" : "Tema claro")</button>
+        <a class="botao-leve" href="https://github.com/erickfuzer/Vega" target="_blank" rel="noopener">GitHub</a>
+    </div>
+</header>
+
+<section class="intro">
+    <h1>Monte a sua instalação do Windows, sem perder tempo com o que não usa.</h1>
+    <p>Escolha o que fica e o que sai, e baixe um <code>autounattend.xml</code> pronto. Tudo roda no seu navegador: nada do que você marca sai do seu computador.</p>
+    <div class="perfis" role="group" aria-label="Perfis prontos">
+        @foreach (var perfil in Perfis.Todos)
+        {
+            <button type="button" class="perfil @(perfilAtivo == perfil.Id ? "ativo" : "")" aria-pressed="@(perfilAtivo == perfil.Id ? "true" : "false")" @onclick="() => AplicarPerfil(perfil)">
+                <strong>@perfil.Nome</strong>
+                <span>@perfil.Descricao</span>
+            </button>
+        }
+    </div>
+</section>
+
+@if (erro is not null)
+{
+    <p class="aviso-erro" role="alert">@erro</p>
+}
+
+<div class="corpo">
+    <aside class="lateral">
+        <input class="busca" type="search" placeholder="Buscar opção" aria-label="Buscar opção" @bind="busca" @bind:event="oninput" />
+        <nav class="categorias" aria-label="Categorias">
+            @foreach (var categoria in Enum.GetValues<Categoria>())
+            {
+                var total = ContarAlteracoes(categoria);
+                <button type="button" class="categoria @(!Buscando && categoriaAtual == categoria ? "ativa" : "")" @onclick="() => SelecionarCategoria(categoria)">
+                    @Catalogo.NomesCategorias[categoria]
+                    @if (total > 0)
+                    {
+                        <span class="contador">@total</span>
+                    }
+                </button>
+            }
+        </nav>
+    </aside>
+
+    <main class="conteudo">
+        @if (Buscando)
+        {
+            <h2>Resultados</h2>
+            var opcoes = Catalogo.Opcoes.Where(o => Combina(o.Titulo) || Combina(o.Descricao)).ToList();
+            var apps = Catalogo.Apps.Where(a => Combina(a.Nome) || Combina(a.Grupo)).ToList();
+            @if (opcoes.Count == 0 && apps.Count == 0)
+            {
+                <p class="vazio">Nada encontrado para "@busca".</p>
+            }
+            @foreach (var grupo in opcoes.GroupBy(o => o.Categoria))
+            {
+                <h3 class="resultado-categoria">@Catalogo.NomesCategorias[grupo.Key]</h3>
+                <div class="lista">
+                    @foreach (var opcao in grupo)
+                    {
+                        @LinhaOpcao(opcao)
+                    }
+                </div>
+            }
+            @if (apps.Count > 0)
+            {
+                <h3 class="resultado-categoria">Apps e recursos</h3>
+                <div class="lista">
+                    @foreach (var app in apps)
+                    {
+                        @LinhaApp(app)
+                    }
+                </div>
+            }
+        }
+        else
+        {
+            <h2>@Catalogo.NomesCategorias[categoriaAtual]</h2>
+            @switch (categoriaAtual)
+            {
+                case Categoria.Instalacao:
+                    <p class="secao-sub">Idioma, região e edição usados pela instalação.</p>
+                    <div class="lista">
+                        <label class="opcao @(estado.EscolherIdiomaNaInstalacao ? "ligada" : "")">
+                            <span class="opcao-titulo">Escolher o idioma na hora de instalar</span>
+                            <span class="opcao-descricao">A instalação pergunta idioma e teclado, em vez de usar os valores abaixo.</span>
+                            <input class="chave" type="checkbox" role="switch" @bind="estado.EscolherIdiomaNaInstalacao" />
+                        </label>
+                        <label class="campo">
+                            <span class="campo-titulo">Idioma do Windows</span>
+                            <span class="campo-descricao">Precisa ser um idioma que exista na sua ISO.</span>
+                            <select @bind="estado.IdiomaImagem" disabled="@estado.EscolherIdiomaNaInstalacao">
+                                @foreach (var item in Gerador.ImageLanguages.Values.OrderBy(i => i.DisplayName))
+                                {
+                                    <option value="@item.Id">@item.DisplayName</option>
+                                }
+                            </select>
+                        </label>
+                        <label class="campo">
+                            <span class="campo-titulo">Formato regional</span>
+                            <span class="campo-descricao">Datas, moeda e números.</span>
+                            <select @bind="estado.IdiomaRegional" disabled="@estado.EscolherIdiomaNaInstalacao">
+                                @foreach (var item in Gerador.UserLocales.Values.OrderBy(i => i.DisplayName))
+                                {
+                                    <option value="@item.Id">@item.DisplayName</option>
+                                }
+                            </select>
+                        </label>
+                        <label class="campo">
+                            <span class="campo-titulo">Teclado</span>
+                            <span class="campo-descricao">O padrão é o ABNT2 brasileiro.</span>
+                            <select @bind="estado.Teclado" disabled="@estado.EscolherIdiomaNaInstalacao">
+                                @foreach (var item in Gerador.KeyboardIdentifiers.Values.OrderBy(i => i.DisplayName))
+                                {
+                                    <option value="@item.Id">@item.DisplayName</option>
+                                }
+                            </select>
+                        </label>
+                        <label class="campo">
+                            <span class="campo-titulo">País ou região</span>
+                            <span class="campo-descricao">Define conteúdos e serviços regionais.</span>
+                            <select @bind="estado.Regiao" disabled="@estado.EscolherIdiomaNaInstalacao">
+                                @foreach (var item in Gerador.GeoLocations.Values.OrderBy(i => i.DisplayName))
+                                {
+                                    <option value="@item.Id">@item.DisplayName</option>
+                                }
+                            </select>
+                        </label>
+                        <label class="campo">
+                            <span class="campo-titulo">Edição do Windows</span>
+                            <span class="campo-descricao">Precisa bater com a licença da máquina para ativar sozinha.</span>
+                            <select @bind="estado.Edicao">
+                                <option value="">Perguntar na instalação</option>
+                                @foreach (var item in Gerador.WindowsEditions.Values.Where(e => e.Visible).OrderBy(i => i.DisplayName))
+                                {
+                                    <option value="@item.Id">@item.DisplayName</option>
+                                }
+                            </select>
+                        </label>
+                        <label class="opcao @(estado.IgnorarRequisitos ? "ligada" : "")">
+                            <span class="opcao-titulo">Ignorar os requisitos do Windows 11</span>
+                            <span class="opcao-descricao">Permite instalar sem TPM, Secure Boot ou processador da lista oficial.</span>
+                            <input class="chave" type="checkbox" role="switch" @bind="estado.IgnorarRequisitos" />
+                        </label>
+                        @ListaOpcoes(Categoria.Instalacao)
+                    </div>
+                    break;
+
+                case Categoria.Conta:
+                    <p class="secao-sub">Como a conta é criada e o que aparece na configuração inicial.</p>
+                    <div class="lista">
+                        <label class="campo">
+                            <span class="campo-titulo">Tipo de conta</span>
+                            <span class="campo-descricao">A conta local é criada na hora, sem pedir email.</span>
+                            <select @bind="estado.Conta">
+                                <option value="@TipoConta.Local">Conta local</option>
+                                <option value="@TipoConta.Microsoft">Conta Microsoft</option>
+                            </select>
+                        </label>
+                        <label class="opcao @(estado.MostrarTelaWifi ? "ligada" : "")">
+                            <span class="opcao-titulo">Mostrar a tela de rede na configuração inicial</span>
+                            <span class="opcao-descricao">Desligada, a tela é pulada e o Wi-Fi fica para depois do primeiro login.</span>
+                            <input class="chave" type="checkbox" role="switch" @bind="estado.MostrarTelaWifi" />
+                        </label>
+                        <label class="campo">
+                            <span class="campo-titulo">Configurações de privacidade</span>
+                            <span class="campo-descricao">As opções que o Windows pergunta na configuração inicial.</span>
+                            <select @bind="estado.Privacidade">
+                                <option value="@ExpressSettingsMode.DisableAll">Desligar todas</option>
+                                <option value="@ExpressSettingsMode.Interactive">Perguntar na instalação</option>
+                                <option value="@ExpressSettingsMode.EnableAll">Ligar todas</option>
+                            </select>
+                        </label>
+                        @ListaOpcoes(Categoria.Conta)
+                    </div>
+                    break;
+
+                case Categoria.Apps:
+                    <p class="secao-sub">Ligue o que você quer remover. Os apps com aviso costumam fazer falta.</p>
+                    <div class="acoes-lista">
+                        <button type="button" class="botao-mini" @onclick="MarcarAppsSemAviso">Marcar os sem aviso</button>
+                        <button type="button" class="botao-mini" @onclick="LimparApps">Limpar</button>
+                    </div>
+                    @foreach (var grupo in Catalogo.GruposApps)
+                    {
+                        <h3 class="grupo-titulo">@grupo</h3>
+                        <div class="lista">
+                            @foreach (var app in Catalogo.Apps.Where(a => a.Grupo == grupo))
+                            {
+                                @LinhaApp(app)
+                            }
+                        </div>
+                    }
+                    break;
+
+                case Categoria.Interface:
+                    <p class="secao-sub">A aparência e o comportamento da barra de tarefas e do Explorador.</p>
+                    <div class="lista">
+                        <label class="campo">
+                            <span class="campo-titulo">Busca na barra de tarefas</span>
+                            <span class="campo-descricao">Como a pesquisa aparece na barra.</span>
+                            <select @bind="estado.BuscaBarra">
+                                <option value="@TaskbarSearchMode.Box">Caixa de pesquisa</option>
+                                <option value="@TaskbarSearchMode.Label">Ícone com texto</option>
+                                <option value="@TaskbarSearchMode.Icon">Só o ícone</option>
+                                <option value="@TaskbarSearchMode.Hide">Esconder</option>
+                            </select>
+                        </label>
+                        <label class="campo">
+                            <span class="campo-titulo">Arquivos ocultos</span>
+                            <span class="campo-descricao">O que o Explorador mostra. Mostrar os do sistema faz aparecer o desktop.ini.</span>
+                            <select @bind="estado.ArquivosOcultos">
+                                <option value="@HideModes.Hidden">Esconder</option>
+                                <option value="@HideModes.HiddenSystem">Mostrar os ocultos, menos os do sistema</option>
+                                <option value="@HideModes.None">Mostrar tudo</option>
+                            </select>
+                        </label>
+                        @ListaOpcoes(Categoria.Interface)
+                    </div>
+                    break;
+
+                default:
+                    <div class="lista">
+                        @ListaOpcoes(categoriaAtual)
+                    </div>
+                    break;
+            }
+        }
+    </main>
+</div>
+
+<footer class="rodape">
+    Motor baseado no <a href="https://github.com/cschneegans/unattend-generator" target="_blank" rel="noopener">unattend-generator</a>, de Christoph Schneegans, sob a licença MIT. O Vega não é afiliado à Microsoft.
+</footer>
+
+<div class="capsula">
+    <span class="capsula-info">@TotalAlteracoes @(TotalAlteracoes == 1 ? "alteração" : "alterações")</span>
+    <button type="button" class="secundario" @onclick="VerXml">Ver XML</button>
+    <button type="button" class="principal" @onclick="Baixar">Baixar XML</button>
+</div>
+
+<dialog id="previa-xml" aria-labelledby="previa-titulo">
+    <div class="dialogo-corpo">
+        <div class="dialogo-topo">
+            <h2 id="previa-titulo">autounattend.xml</h2>
+            <button type="button" class="botao-mini" @onclick="Copiar">@(copiado ? "Copiado!" : "Copiar")</button>
+            <button type="button" class="botao-mini" @onclick="FecharPrevia">Fechar</button>
+        </div>
+        <pre tabindex="0">@previa</pre>
+    </div>
+</dialog>
+
+@code {
+    private readonly EstadoVega estado = new();
+    private UnattendGenerator? gerador;
+    private Categoria categoriaAtual = Categoria.Instalacao;
+    private string busca = "";
+    private string? perfilAtivo = "padrao";
+    private string temaAtual = "grafite";
+    private string? erro;
+    private string previa = "";
+    private bool copiado;
+
+    private UnattendGenerator Gerador => gerador ??= new UnattendGenerator();
+
+    private bool Buscando => !string.IsNullOrWhiteSpace(busca);
+
+    private int TotalAlteracoes => estado.OpcoesLigadas.Count + estado.AppsRemovidos.Count;
+
+    protected override async Task OnAfterRenderAsync(bool primeiraVez)
+    {
+        if (primeiraVez)
+        {
+            temaAtual = await JS.InvokeAsync<string>("vega.temaAtual");
+            StateHasChanged();
+        }
+    }
+
+    private bool Combina(string texto) => texto.Contains(busca.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    private int ContarAlteracoes(Categoria categoria) => categoria == Categoria.Apps
+        ? estado.AppsRemovidos.Count
+        : Catalogo.Opcoes.Count(o => o.Categoria == categoria && estado.OpcoesLigadas.Contains(o.Id));
+
+    private void SelecionarCategoria(Categoria categoria)
+    {
+        busca = "";
+        categoriaAtual = categoria;
+    }
+
+    private void AplicarPerfil(Perfil perfil)
+    {
+        perfil.Aplicar(estado);
+        perfilAtivo = perfil.Id;
+    }
+
+    private void AlternarOpcao(Opcao opcao, bool ligada)
+    {
+        if (ligada) estado.OpcoesLigadas.Add(opcao.Id); else estado.OpcoesLigadas.Remove(opcao.Id);
+        perfilAtivo = null;
+    }
+
+    private void AlternarApp(ItemRemovivel app, bool remover)
+    {
+        if (remover) estado.AppsRemovidos.Add(app.Id); else estado.AppsRemovidos.Remove(app.Id);
+        perfilAtivo = null;
+    }
+
+    private void MarcarAppsSemAviso()
+    {
+        estado.AppsRemovidos.UnionWith(Catalogo.Apps.Where(a => a.Aviso == Aviso.Nenhum).Select(a => a.Id));
+        perfilAtivo = null;
+    }
+
+    private void LimparApps()
+    {
+        estado.AppsRemovidos.Clear();
+        perfilAtivo = null;
+    }
+
+    private async Task AlternarTema() => temaAtual = await JS.InvokeAsync<string>("vega.alternarTema");
+
+    private byte[]? Gerar()
+    {
+        try
+        {
+            erro = null;
+            return estado.GerarXml(Gerador);
+        }
+        catch (ConfigurationException falha)
+        {
+            erro = $"Essa combinação não pode ser gerada: {falha.Message}";
+        }
+        catch (Exception falha)
+        {
+            erro = $"Não foi possível gerar o arquivo: {falha.Message}";
+        }
+        return null;
+    }
+
+    private async Task Baixar()
+    {
+        if (Gerar() is { } bytes)
+        {
+            await JS.InvokeVoidAsync("vega.baixar", "autounattend.xml", bytes);
+        }
+    }
+
+    private async Task VerXml()
+    {
+        if (Gerar() is { } bytes)
+        {
+            previa = Encoding.ASCII.GetString(bytes);
+            copiado = false;
+            await JS.InvokeVoidAsync("vega.abrirDialogo", "previa-xml");
+        }
+    }
+
+    private async Task FecharPrevia() => await JS.InvokeVoidAsync("vega.fecharDialogo", "previa-xml");
+
+    private async Task Copiar() => copiado = await JS.InvokeAsync<bool>("vega.copiar", previa);
+
+    private static string ClasseAviso(Aviso aviso) => aviso switch
+    {
+        Aviso.Risco => "risco",
+        Aviso.Atencao => "atencao",
+        _ => "",
+    };
+
+    private RenderFragment ListaOpcoes(Categoria categoria) => __builder =>
+    {
+        foreach (var opcao in Catalogo.Opcoes.Where(o => o.Categoria == categoria))
+        {
+            @LinhaOpcao(opcao)
+        }
+    };
+
+    private RenderFragment LinhaOpcao(Opcao opcao) => __builder =>
+    {
+        var ligada = estado.OpcoesLigadas.Contains(opcao.Id);
+        <label class="opcao @(ligada ? "ligada" : "")" @key="opcao.Id">
+            <span class="opcao-titulo">@opcao.Titulo</span>
+            <span class="opcao-descricao">@opcao.Descricao</span>
+            @if (opcao.Custo is not null)
+            {
+                <span class="opcao-custo @ClasseAviso(opcao.Aviso)">@opcao.Custo</span>
+            }
+            <input class="chave" type="checkbox" role="switch" checked="@ligada" @onchange="e => AlternarOpcao(opcao, e.Value is true)" />
+        </label>
+    };
+
+    private RenderFragment LinhaApp(ItemRemovivel app) => __builder =>
+    {
+        var remover = estado.AppsRemovidos.Contains(app.Id);
+        <label class="opcao @(remover ? "ligada" : "")" @key="app.Id">
+            <span class="opcao-titulo">@app.Nome</span>
+            @if (app.Custo is not null)
+            {
+                <span class="opcao-custo @ClasseAviso(app.Aviso)">@app.Custo</span>
+            }
+            <input class="chave" type="checkbox" role="switch" aria-label="Remover @app.Nome" checked="@remover" @onchange="e => AlternarApp(app, e.Value is true)" />
+        </label>
+    };
+}

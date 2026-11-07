@@ -1,0 +1,10 @@
+﻿<Router AppAssembly="@typeof(App).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+    </Found>
+    <NotFound>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <p class="vazio">Página não encontrada. <a href=".">Voltar ao início</a></p>
+        </LayoutView>
+    </NotFound>
+</Router>

@@ -1,0 +1,49 @@
+name: Publicar no GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Testar
+        run: dotnet test tests/Vega.Tests/Vega.Tests.csproj -c Release
+
+      - name: Publicar o site
+        run: dotnet publish src/Vega.Web/Vega.Web.csproj -c Release -o saida
+
+      - name: Ajustar para o endereço do GitHub Pages
+        run: |
+          sed -i 's|<base href="/" />|<base href="/Vega/" />|' saida/wwwroot/index.html
+          cp saida/wwwroot/index.html saida/wwwroot/404.html
+          touch saida/wwwroot/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: saida/wwwroot
+
+      - id: deploy
+        uses: actions/deploy-pages@v4
