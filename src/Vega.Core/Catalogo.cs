@@ -11,6 +11,7 @@ public static class Catalogo
     public static IReadOnlyDictionary<Categoria, string> NomesCategorias { get; } = new Dictionary<Categoria, string>
     {
         [Categoria.Instalacao] = "Instalação",
+        [Categoria.Disco] = "Disco e imagem",
         [Categoria.Conta] = "Conta e rede",
         [Categoria.Apps] = "Apps e recursos",
         [Categoria.Privacidade] = "Privacidade",
@@ -191,6 +192,32 @@ public static class Catalogo
             "Não apaga o XML e os logs ao terminar. Útil para investigar problemas.",
             (c, v) => c with { KeepSensitiveFiles = v },
             Aviso.Risco, "O XML pode conter senhas e chaves, e fica guardado no disco."),
+    ];
+
+    public static IReadOnlyList<OpcaoScript> OpcoesScript { get; } =
+    [
+        new("DisableDefender", Categoria.Seguranca, "Desligar o Microsoft Defender",
+            "Desativa os serviços do antivírus antes do primeiro boot, enquanto a proteção dele ainda não está ativa.",
+            e => e.DesligarDefender, (e, v) => e.DesligarDefender = v,
+            Aviso.Risco, "O computador fica sem antivírus. Em um teste do Vega, alguns serviços de monitoramento continuaram rodando."),
+        new("PauseBeforeFormatting", Categoria.Disco, "Pausar antes de formatar",
+            "Espera você apertar uma tecla antes de apagar o disco. É a última chance de desistir.",
+            e => e.PausarAntesDeFormatar, (e, v) => e.PausarAntesDeFormatar = v),
+        new("PauseBeforeReboot", Categoria.Disco, "Pausar antes de reiniciar",
+            "Espera você apertar uma tecla ao terminar esta etapa. Útil para ler as mensagens.",
+            e => e.PausarAntesDeReiniciar, (e, v) => e.PausarAntesDeReiniciar = v),
+        new("VerifyImage", Categoria.Disco, "Verificar a imagem ao aplicar",
+            "Confere a integridade do Windows ao copiar para o disco.",
+            e => e.VerificarImagem, (e, v) => e.VerificarImagem = v,
+            Custo: "Deixa essa etapa mais lenta, principalmente em pendrives USB 2.0."),
+        new("CompactOs", Categoria.Disco, "Compactar o Windows",
+            "Instala com CompactOS e economiza alguns gigabytes no disco.",
+            e => e.CompactarWindows, (e, v) => e.CompactarWindows = v,
+            Custo: "Gasta um pouco mais de CPU ao ler arquivos do sistema."),
+        new("Disable8Dot3Names", Categoria.Disco, "Remover nomes curtos 8.3",
+            "Remove nomes de arquivo no formato antigo do DOS e desliga a criação deles.",
+            e => e.DesligarNomes8Dot3, (e, v) => e.DesligarNomes8Dot3 = v,
+            Aviso.Atencao, "O ganho é pequeno, e programas muito antigos podem depender desses nomes."),
     ];
 
     public static IReadOnlyList<ItemRemovivel> Apps { get; } =

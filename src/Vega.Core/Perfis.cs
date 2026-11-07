@@ -74,13 +74,17 @@ public static class Perfis
                 estado.AppsRemovidos.UnionWith(AppsDiaADia);
             }),
         new("maximo", "Remoção máxima",
-            "Para máquinas de teste: remove quase tudo e desliga proteções. Leia os avisos antes de usar.",
+            "Para máquinas de teste: desliga o Defender, remove quase tudo e apaga o disco que você escolher. Leia os avisos antes de usar.",
             estado =>
             {
                 estado.Limpar();
                 estado.OpcoesLigadas.UnionWith(OpcoesDiaADia);
                 estado.OpcoesLigadas.UnionWith(OpcoesExtrasMaximo);
                 estado.AppsRemovidos.UnionWith(Catalogo.Apps.Select(a => a.Id).Where(id => !AppsMantidosNoMaximo.Contains(id)));
+                estado.Modo = ModoInstalacao.Script;
+                estado.Recuperacao = RecoveryMode.None;
+                estado.DesligarDefender = true;
+                estado.CompactarWindows = true;
             }),
     ];
 }

@@ -27,6 +27,8 @@ Monte a sua instalação do Windows sem perder tempo com o que não usa. Todas a
 - **O custo de cada opção:** avisos dizem o que quebra ou o que se perde, em vez de deixar você descobrir depois de instalar
 - **Em português:** as 44 opções de ligar e desligar e os 60 itens removíveis têm nome e descrição em português
 - **Conta local de verdade:** por padrão, a instalação pula a tela de rede e vai direto para criar usuário e senha, sem pedir conta Microsoft
+- **Disco com segurança:** o modo normal usa a tela de discos do Windows. O modo script pergunta o disco na hora e pausa antes de formatar, e a barra de ações avisa sempre que o XML pode apagar um disco
+- **Modo script:** desligar o Defender, compactar o Windows, escolher disco por critérios, formato das partições, recuperação, arquivo de paginação e scripts próprios
 - **Prévia do XML:** veja e copie o arquivo antes de baixar
 - **Privado:** o arquivo é gerado no seu navegador, e nada do que você marca é enviado para um servidor
 - **Temas claro e grafite**, e versão para celular
@@ -65,8 +67,10 @@ dotnet test tests/Vega.Tests
 
 ## Limitações
 
-- **Ainda não testado em uma instalação real:** os testes confirmam que o XML é válido, mas os perfis do Vega ainda não passaram por uma instalação do começo ao fim.
-- **Seções que faltam:** disco e partições, desligar o Defender, conta criada com antecedência, perfil de Wi-Fi, scripts próprios, AppLocker, papel de parede e cores, Menu Iniciar, fuso horário, nome do computador, chave do produto e políticas de senha.
+- **Ainda não testado em uma instalação real:** os testes confirmam que o XML é válido e que o script do modo script pergunta e pausa antes de apagar, mas os perfis do Vega ainda não passaram por uma instalação do começo ao fim.
+- **Escolha de disco:** no modo script, o pendrive também aparece na lista e não é recusado. Confira o disco pelo tamanho.
+- **Defender:** no modo script, alguns serviços de monitoramento podem continuar rodando. Isso foi visto em um teste, com o mesmo método de desligamento.
+- **Seções que faltam:** conta criada com antecedência, perfil de Wi-Fi, scripts do primeiro login, AppLocker, papel de parede e cores, Menu Iniciar, fuso horário, nome do computador, chave do produto e políticas de senha.
 - **Remover o Edge:** o motor só libera o botão de desinstalar nas Configurações. A remoção completa ainda não está no Vega.
 - **Download inicial:** o .NET vem junto com a página, cerca de 11 MB antes da compactação. As visitas seguintes usam o cache do navegador.
 

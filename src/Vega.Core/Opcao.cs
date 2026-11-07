@@ -5,6 +5,7 @@ namespace Vega.Core;
 public enum Categoria
 {
     Instalacao,
+    Disco,
     Conta,
     Apps,
     Privacidade,
@@ -31,6 +32,17 @@ public sealed record Opcao(
     string Titulo,
     string Descricao,
     Func<Configuration, bool, Configuration> Aplicar,
+    Aviso Aviso = Aviso.Nenhum,
+    string? Custo = null);
+
+/// <summary>Uma opção que só existe no modo script, quando o Vega aplica a imagem por conta própria.</summary>
+public sealed record OpcaoScript(
+    string Id,
+    Categoria Categoria,
+    string Titulo,
+    string Descricao,
+    Func<EstadoVega, bool> Ler,
+    Action<EstadoVega, bool> Gravar,
     Aviso Aviso = Aviso.Nenhum,
     string? Custo = null);
 

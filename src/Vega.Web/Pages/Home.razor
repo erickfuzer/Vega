@@ -58,9 +58,20 @@
             <h2>Resultados</h2>
             var opcoes = Catalogo.Opcoes.Where(o => Combina(o.Titulo) || Combina(o.Descricao)).ToList();
             var apps = Catalogo.Apps.Where(a => Combina(a.Nome) || Combina(a.Grupo)).ToList();
-            @if (opcoes.Count == 0 && apps.Count == 0)
+            var opcoesScript = Catalogo.OpcoesScript.Where(o => Combina(o.Titulo) || Combina(o.Descricao)).ToList();
+            @if (opcoes.Count == 0 && apps.Count == 0 && opcoesScript.Count == 0)
             {
                 <p class="vazio">Nada encontrado para "@busca".</p>
+            }
+            @if (opcoesScript.Count > 0)
+            {
+                <h3 class="resultado-categoria">Modo script</h3>
+                <div class="lista">
+                    @foreach (var opcao in opcoesScript)
+                    {
+                        @LinhaOpcaoScript(opcao)
+                    }
+                </div>
             }
             @foreach (var grupo in opcoes.GroupBy(o => o.Categoria))
             {
@@ -147,12 +158,249 @@
                                 }
                             </select>
                         </label>
-                        <label class="opcao @(estado.IgnorarRequisitos ? "ligada" : "")">
+                        <label class="opcao @(estado.IgnorarRequisitos && estado.Modo == ModoInstalacao.TelaNormal ? "ligada" : "") @(estado.Modo != ModoInstalacao.TelaNormal ? "desativada" : "")">
                             <span class="opcao-titulo">Ignorar os requisitos do Windows 11</span>
-                            <span class="opcao-descricao">Permite instalar sem TPM, Secure Boot ou processador da lista oficial.</span>
-                            <input class="chave" type="checkbox" role="switch" @bind="estado.IgnorarRequisitos" />
+                            <span class="opcao-descricao">Permite instalar sem TPM, Secure Boot ou processador da lista oficial. No modo script, a verificação não acontece.</span>
+                            <input class="chave" type="checkbox" role="switch" disabled="@(estado.Modo != ModoInstalacao.TelaNormal)" @bind="estado.IgnorarRequisitos" />
                         </label>
                         @ListaOpcoes(Categoria.Instalacao)
+                    </div>
+                    break;
+
+                case Categoria.Disco:
+                    <p class="secao-sub">Como o Windows chega ao disco. Esta é a parte da instalação que pode apagar seus arquivos.</p>
+                    <div class="lista">
+                        <label class="campo">
+                            <span class="campo-titulo">Modo de instalação</span>
+                            <span class="campo-descricao">O modo normal usa a tela de discos do Windows. O modo script libera as opções abaixo e o desligamento do Defender.</span>
+                            <select @bind="estado.Modo" @bind:after="MarcarPersonalizado">
+                                <option value="@ModoInstalacao.TelaNormal">Normal, escolhendo o disco na tela do Windows</option>
+                                <option value="@ModoInstalacao.Script">Script do Vega</option>
+                                <option value="@ModoInstalacao.ScriptProprio">Meu próprio script</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    @if (estado.Modo == ModoInstalacao.TelaNormal)
+                    {
+                        <p class="alerta">Nada é apagado sem você escolher na tela do Windows. Este é o modo mais seguro.</p>
+                        <div class="lista">
+                            <label class="opcao @(estado.UsarConfigurationSet ? "ligada" : "")">
+                                <span class="opcao-titulo">Usar um conjunto de configuração</span>
+                                <span class="opcao-descricao">Para quem tem uma pasta $OEM$ na mídia e quer que a instalação do Windows a copie.</span>
+                                <input class="chave" type="checkbox" role="switch" @bind="estado.UsarConfigurationSet" @bind:after="MarcarPersonalizado" />
+                            </label>
+                        </div>
+                    }
+                    else if (estado.Modo == ModoInstalacao.ScriptProprio)
+                    {
+                        <p class="alerta risco" role="alert">Seu script substitui toda essa etapa da instalação e pode apagar qualquer disco. O Vega não confere o que ele faz.</p>
+                        <label class="campo campo-texto">
+                            <span class="campo-titulo">Script do WinPE (.cmd)</span>
+                            <span class="campo-descricao">Lembre que o ambiente de instalação não tem findstr e outros comandos comuns.</span>
+                            <textarea rows="10" spellcheck="false" @bind="estado.ScriptInstalacao" @bind:after="MarcarPersonalizado"></textarea>
+                        </label>
+                    }
+                    else
+                    {
+                        @if (estado.ApagaSemPerguntar)
+                        {
+                            <p class="alerta risco" role="alert"><strong>O disco será apagado sem nenhuma pergunta.</strong> Basta dar boot com esse pendrive em qualquer computador. Ligue a pausa antes de formatar, a menos que tenha certeza.</p>
+                        }
+                        else if (estado.ApagaDisco)
+                        {
+                            <p class="alerta risco" role="alert"><strong>Este modo apaga o disco inteiro</strong>, sem escolher partições. Confira o disco na hora pelo tamanho, porque o pendrive também pode aparecer na lista, e o número dos discos pode mudar.</p>
+                        }
+
+                        <h3 class="grupo-titulo">Disco</h3>
+                        <div class="lista">
+                            <label class="campo">
+                                <span class="campo-titulo">Particionamento</span>
+                                <span class="campo-descricao">À mão, você abre um console com Shift + F10 e usa o diskpart.</span>
+                                <select @bind="estado.Particoes" @bind:after="MarcarPersonalizado">
+                                    <option value="@Particionamento.ApagarDisco">Apagar o disco inteiro e recriar</option>
+                                    <option value="@Particionamento.AMao">Particionar à mão</option>
+                                    <option value="@Particionamento.ScriptDiskpart">Meu script do diskpart</option>
+                                </select>
+                            </label>
+
+                            @if (estado.Particoes == Particionamento.ScriptDiskpart)
+                            {
+                                <label class="campo campo-texto">
+                                    <span class="campo-titulo">Script do diskpart</span>
+                                    <span class="campo-descricao">Precisa ter ASSIGN LETTER=W para o Windows e ASSIGN LETTER=S para o sistema.</span>
+                                    <textarea rows="8" spellcheck="false" @bind="estado.ScriptDiskpart" @bind:after="MarcarPersonalizado"></textarea>
+                                </label>
+                            }
+
+                            @if (estado.Particoes == Particionamento.ApagarDisco)
+                            {
+                                <label class="campo">
+                                    <span class="campo-titulo">Qual disco</span>
+                                    <span class="campo-descricao">Perguntar é o mais seguro. Os outros modos não pedem confirmação do disco.</span>
+                                    <select @bind="estado.Alvo" @bind:after="MarcarPersonalizado">
+                                        <option value="@AlvoDisco.Perguntar">Perguntar na hora</option>
+                                        <option value="@AlvoDisco.Criterios">Encontrar por critérios</option>
+                                        <option value="@AlvoDisco.Numero">Sempre o mesmo número</option>
+                                        <option value="@AlvoDisco.ScriptProprio">Meu script</option>
+                                    </select>
+                                </label>
+
+                                @if (estado.Alvo == AlvoDisco.Numero)
+                                {
+                                    <label class="campo">
+                                        <span class="campo-titulo">Número do disco</span>
+                                        <span class="campo-descricao">O número pode mudar com o pendrive conectado.</span>
+                                        <input type="number" min="0" @bind="estado.DiscoNumero" @bind:after="MarcarPersonalizado" />
+                                    </label>
+                                }
+                                else if (estado.Alvo == AlvoDisco.ScriptProprio)
+                                {
+                                    <label class="campo campo-texto">
+                                        <span class="campo-titulo">Script que escolhe o disco (VBScript)</span>
+                                        <span class="campo-descricao">Deve escrever o número do disco com WScript.Echo.</span>
+                                        <textarea rows="6" spellcheck="false" @bind="estado.ScriptAlvoDisco" @bind:after="MarcarPersonalizado"></textarea>
+                                    </label>
+                                }
+                                else if (estado.Alvo == AlvoDisco.Criterios)
+                                {
+                                    <p class="secao-sub">A instalação para com erro se nenhum disco, ou mais de um, passar nos critérios.</p>
+                                    <label class="campo">
+                                        <span class="campo-titulo">Tamanho mínimo (GiB)</span>
+                                        <span class="campo-descricao">Vazio não aplica esse critério.</span>
+                                        <input type="number" min="0" @bind="estado.CriterioMinimoGiB" @bind:after="MarcarPersonalizado" />
+                                    </label>
+                                    <label class="campo">
+                                        <span class="campo-titulo">Tamanho máximo (GiB)</span>
+                                        <span class="campo-descricao">Vazio não aplica esse critério.</span>
+                                        <input type="number" min="0" @bind="estado.CriterioMaximoGiB" @bind:after="MarcarPersonalizado" />
+                                    </label>
+                                    <label class="campo">
+                                        <span class="campo-titulo">Número do disco</span>
+                                        <span class="campo-descricao">Vazio aceita qualquer número.</span>
+                                        <input type="number" min="0" @bind="estado.CriterioNumero" @bind:after="MarcarPersonalizado" />
+                                    </label>
+                                    <label class="opcao @(estado.CriterioSemParticoes ? "ligada" : "")">
+                                        <span class="opcao-titulo">Só aceitar disco sem partições</span>
+                                        <span class="opcao-descricao">Protege um disco que já tem dados, mas a instalação para com erro se o disco alvo tiver partições.</span>
+                                        @if (!estado.CriterioSemParticoes)
+                                        {
+                                            <span class="opcao-custo risco">Um disco com arquivos pode ser apagado se passar nos outros critérios.</span>
+                                        }
+                                        <input class="chave" type="checkbox" role="switch" @bind="estado.CriterioSemParticoes" @bind:after="MarcarPersonalizado" />
+                                    </label>
+                                    <label class="opcao @(estado.CriterioTipoInterno ? "ligada" : "")">
+                                        <span class="opcao-titulo">Só aceitar disco interno</span>
+                                        <span class="opcao-descricao">Recusa o que não for SATA ou NVMe, como pendrives.</span>
+                                        <input class="chave" type="checkbox" role="switch" @bind="estado.CriterioTipoInterno" @bind:after="MarcarPersonalizado" />
+                                    </label>
+                                    <label class="opcao @(estado.CriterioMidiaFixa ? "ligada" : "")">
+                                        <span class="opcao-titulo">Só aceitar mídia fixa</span>
+                                        <span class="opcao-descricao">Recusa mídias removíveis.</span>
+                                        <input class="chave" type="checkbox" role="switch" @bind="estado.CriterioMidiaFixa" @bind:after="MarcarPersonalizado" />
+                                    </label>
+                                }
+
+                                <label class="campo">
+                                    <span class="campo-titulo">Formato das partições</span>
+                                    <span class="campo-descricao">Automático usa GPT em UEFI e MBR em BIOS.</span>
+                                    <select @bind="estado.Layout" @bind:after="MarcarPersonalizado">
+                                        <option value="@PartitionLayout.Automatic">Automático</option>
+                                        <option value="@PartitionLayout.GPT">GPT</option>
+                                        <option value="@PartitionLayout.MBR">MBR</option>
+                                    </select>
+                                </label>
+                                <label class="campo">
+                                    <span class="campo-titulo">Recuperação (WinRE)</span>
+                                    <span class="campo-descricao">Sem ela, não há reparo de inicialização nem "Redefinir este PC".</span>
+                                    <select @bind="estado.Recuperacao" @bind:after="MarcarPersonalizado">
+                                        <option value="@RecoveryMode.Partition">Manter, em uma partição própria</option>
+                                        <option value="@RecoveryMode.None">Apagar</option>
+                                    </select>
+                                </label>
+                                <label class="campo">
+                                    <span class="campo-titulo">Partição do sistema (MiB)</span>
+                                    <span class="campo-descricao">O padrão é @Constants.SystemPartitionSize MiB.</span>
+                                    <input type="number" min="100" @bind="estado.TamanhoSistemaMiB" @bind:after="MarcarPersonalizado" />
+                                </label>
+                                @if (estado.Recuperacao == RecoveryMode.Partition)
+                                {
+                                    <label class="campo">
+                                        <span class="campo-titulo">Partição de recuperação (MiB)</span>
+                                        <span class="campo-descricao">O padrão é @Constants.RecoveryPartitionSize MiB.</span>
+                                        <input type="number" min="300" @bind="estado.TamanhoRecuperacaoMiB" @bind:after="MarcarPersonalizado" />
+                                    </label>
+                                }
+                            }
+                        </div>
+
+                        <h3 class="grupo-titulo">Imagem do Windows</h3>
+                        <div class="lista">
+                            <label class="campo">
+                                <span class="campo-titulo">Qual Windows instalar</span>
+                                <span class="campo-descricao">Pela edição, usa a escolhida em Instalação. Se lá estiver em perguntar, a instalação pergunta aqui também.</span>
+                                <select @bind="estado.Origem" @bind:after="MarcarPersonalizado">
+                                    <option value="@OrigemImagem.Edicao">Pela edição (@NomeEdicao)</option>
+                                    <option value="@OrigemImagem.Perguntar">Perguntar na hora</option>
+                                    <option value="@OrigemImagem.Indice">Pelo número da imagem</option>
+                                    <option value="@OrigemImagem.Nome">Pelo nome da imagem</option>
+                                </select>
+                            </label>
+                            @if (estado.Origem == OrigemImagem.Indice)
+                            {
+                                <label class="campo">
+                                    <span class="campo-titulo">Número da imagem</span>
+                                    <span class="campo-descricao">Muda de uma ISO para outra.</span>
+                                    <input type="number" min="1" @bind="estado.ImagemIndice" @bind:after="MarcarPersonalizado" />
+                                </label>
+                            }
+                            else if (estado.Origem == OrigemImagem.Nome)
+                            {
+                                <label class="campo">
+                                    <span class="campo-titulo">Nome da imagem</span>
+                                    <span class="campo-descricao">Por exemplo, Windows 11 Pro.</span>
+                                    <input type="text" spellcheck="false" @bind="estado.ImagemNome" @bind:after="MarcarPersonalizado" />
+                                </label>
+                            }
+                            <label class="campo">
+                                <span class="campo-titulo">Arquivo de paginação</span>
+                                <span class="campo-descricao">Automático é o melhor para quase todo mundo.</span>
+                                <select @bind="estado.Paginacao" @bind:after="MarcarPersonalizado">
+                                    <option value="@ArquivoPaginacao.Automatico">Automático</option>
+                                    <option value="@ArquivoPaginacao.Personalizado">Tamanho personalizado</option>
+                                    <option value="@ArquivoPaginacao.Nenhum">Sem arquivo de paginação</option>
+                                </select>
+                            </label>
+                            @if (estado.Paginacao == ArquivoPaginacao.Personalizado)
+                            {
+                                <label class="campo">
+                                    <span class="campo-titulo">Tamanho inicial (MiB)</span>
+                                    <span class="campo-descricao">Espaço reservado desde o início.</span>
+                                    <input type="number" min="0" @bind="estado.PaginacaoInicialMiB" @bind:after="MarcarPersonalizado" />
+                                </label>
+                                <label class="campo">
+                                    <span class="campo-titulo">Tamanho máximo (MiB)</span>
+                                    <span class="campo-descricao">Até onde ele pode crescer.</span>
+                                    <input type="number" min="0" @bind="estado.PaginacaoMaximaMiB" @bind:after="MarcarPersonalizado" />
+                                </label>
+                            }
+                            else if (estado.Paginacao == ArquivoPaginacao.Nenhum)
+                            {
+                                <p class="alerta atencao">Sem paginação, alguns programas e jogos podem fechar quando a memória acabar.</p>
+                            }
+                        </div>
+
+                        <h3 class="grupo-titulo">Execução</h3>
+                        <div class="lista">
+                            @ListaOpcoesScript(Categoria.Disco)
+                        </div>
+                    }
+                    break;
+
+                case Categoria.Seguranca:
+                    <div class="lista">
+                        @ListaOpcoesScript(Categoria.Seguranca)
+                        @ListaOpcoes(Categoria.Seguranca)
                     </div>
                     break;
 
@@ -244,6 +492,10 @@
 </footer>
 
 <div class="capsula">
+    @if (estado.ApagaDisco)
+    {
+        <button type="button" class="capsula-perigo" title="Este XML pode apagar um disco. Veja em Disco e imagem." @onclick="() => SelecionarCategoria(Categoria.Disco)">Apaga o disco</button>
+    }
     <span class="capsula-info">@TotalAlteracoes @(TotalAlteracoes == 1 ? "alteração" : "alterações")</span>
     <button type="button" class="secundario" @onclick="VerXml">Ver XML</button>
     <button type="button" class="principal" @onclick="Baixar">Baixar XML</button>
@@ -275,7 +527,17 @@
 
     private bool Buscando => !string.IsNullOrWhiteSpace(busca);
 
-    private int TotalAlteracoes => estado.OpcoesLigadas.Count + estado.AppsRemovidos.Count;
+    private int TotalAlteracoes => Enum.GetValues<Categoria>().Sum(ContarAlteracoes);
+
+    private string NomeEdicao => string.IsNullOrEmpty(estado.Edicao)
+        ? "perguntar"
+        : Gerador.WindowsEditions[estado.Edicao].DisplayName;
+
+    private void MarcarPersonalizado()
+    {
+        perfilAtivo = null;
+        erro = null;
+    }
 
     protected override async Task OnAfterRenderAsync(bool primeiraVez)
     {
@@ -288,9 +550,29 @@
 
     private bool Combina(string texto) => texto.Contains(busca.Trim(), StringComparison.OrdinalIgnoreCase);
 
-    private int ContarAlteracoes(Categoria categoria) => categoria == Categoria.Apps
-        ? estado.AppsRemovidos.Count
-        : Catalogo.Opcoes.Count(o => o.Categoria == categoria && estado.OpcoesLigadas.Contains(o.Id));
+    private int ContarAlteracoes(Categoria categoria)
+    {
+        if (categoria == Categoria.Apps)
+        {
+            return estado.AppsRemovidos.Count;
+        }
+        var total = Catalogo.Opcoes.Count(o => o.Categoria == categoria && estado.OpcoesLigadas.Contains(o.Id));
+        if (categoria == Categoria.Disco && estado.Modo != ModoInstalacao.TelaNormal)
+        {
+            total++;
+        }
+        if (categoria == Categoria.Seguranca && estado.Modo == ModoInstalacao.Script && estado.DesligarDefender)
+        {
+            total++;
+        }
+        return total;
+    }
+
+    private void AlternarOpcaoScript(OpcaoScript opcao, bool ligada)
+    {
+        opcao.Gravar(estado, ligada);
+        MarcarPersonalizado();
+    }
 
     private void SelecionarCategoria(Categoria categoria)
     {
@@ -302,30 +584,31 @@
     {
         perfil.Aplicar(estado);
         perfilAtivo = perfil.Id;
+        erro = null;
     }
 
     private void AlternarOpcao(Opcao opcao, bool ligada)
     {
         if (ligada) estado.OpcoesLigadas.Add(opcao.Id); else estado.OpcoesLigadas.Remove(opcao.Id);
-        perfilAtivo = null;
+        MarcarPersonalizado();
     }
 
     private void AlternarApp(ItemRemovivel app, bool remover)
     {
         if (remover) estado.AppsRemovidos.Add(app.Id); else estado.AppsRemovidos.Remove(app.Id);
-        perfilAtivo = null;
+        MarcarPersonalizado();
     }
 
     private void MarcarAppsSemAviso()
     {
         estado.AppsRemovidos.UnionWith(Catalogo.Apps.Where(a => a.Aviso == Aviso.Nenhum).Select(a => a.Id));
-        perfilAtivo = null;
+        MarcarPersonalizado();
     }
 
     private void LimparApps()
     {
         estado.AppsRemovidos.Clear();
-        perfilAtivo = null;
+        MarcarPersonalizado();
     }
 
     private async Task AlternarTema() => temaAtual = await JS.InvokeAsync<string>("vega.alternarTema");
@@ -396,6 +679,33 @@
                 <span class="opcao-custo @ClasseAviso(opcao.Aviso)">@opcao.Custo</span>
             }
             <input class="chave" type="checkbox" role="switch" checked="@ligada" @onchange="e => AlternarOpcao(opcao, e.Value is true)" />
+        </label>
+    };
+
+    private RenderFragment ListaOpcoesScript(Categoria categoria) => __builder =>
+    {
+        foreach (var opcao in Catalogo.OpcoesScript.Where(o => o.Categoria == categoria))
+        {
+            @LinhaOpcaoScript(opcao)
+        }
+    };
+
+    private RenderFragment LinhaOpcaoScript(OpcaoScript opcao) => __builder =>
+    {
+        var disponivel = estado.Modo == ModoInstalacao.Script;
+        var ligada = disponivel && opcao.Ler(estado);
+        <label class="opcao @(ligada ? "ligada" : "") @(disponivel ? "" : "desativada")" @key="opcao.Id">
+            <span class="opcao-titulo">@opcao.Titulo</span>
+            <span class="opcao-descricao">@opcao.Descricao</span>
+            @if (!disponivel)
+            {
+                <span class="opcao-custo">Só funciona no modo script. <button type="button" class="link" @onclick="() => SelecionarCategoria(Categoria.Disco)" @onclick:preventDefault="true">Ver em Disco e imagem</button></span>
+            }
+            else if (opcao.Custo is not null)
+            {
+                <span class="opcao-custo @ClasseAviso(opcao.Aviso)">@opcao.Custo</span>
+            }
+            <input class="chave" type="checkbox" role="switch" disabled="@(!disponivel)" checked="@ligada" @onchange="e => AlternarOpcaoScript(opcao, e.Value is true)" />
         </label>
     };
 
