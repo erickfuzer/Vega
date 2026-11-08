@@ -17,8 +17,31 @@
 </header>
 
 <section class="intro">
-    <h1>Monte a sua instalação do Windows, sem perder tempo com o que não usa.</h1>
-    <p>Escolha o que fica e o que sai, e baixe um <code>autounattend.xml</code> pronto. Tudo roda no seu navegador: nada do que você marca sai do seu computador.</p>
+    <div class="intro-topo">
+        <div class="intro-texto">
+            <p class="intro-arquivo">autounattend.xml</p>
+            <h1>Windows, sem os brindes.</h1>
+            <p class="intro-sub">Copilot, Recall, Teams, Edge: você marca o que fica e o que sai, e o Vega escreve o arquivo que deixa a instalação no automático. Tudo roda no seu navegador, e nada do que você marca sai do seu computador.</p>
+        </div>
+        @* Lira, com as posições reais das estrelas. Vega é a mais brilhante, no alto. *@
+        <figure class="lira" aria-hidden="true">
+            <svg viewBox="0 0 200 270">
+                <g class="lira-linhas">
+                    <path d="M162 57 118 30M162 57l-47 35M118 30l-3 62M115 92 57 113 30 239l53-20-32-127" />
+                </g>
+                <circle cx="118" cy="30" r="2" />
+                <circle cx="115" cy="92" r="2.2" />
+                <circle cx="57" cy="113" r="2.2" />
+                <circle cx="83" cy="219" r="3.2" />
+                <circle cx="30" cy="239" r="3.4" />
+                <path class="lira-vega" d="M162 39c1.2 10.6 7.4 16.8 18 18-10.6 1.2-16.8 7.4-18 18-1.2-10.6-7.4-16.8-18-18 10.6-1.2 16.8-7.4 18-18Z" />
+                <text x="162" y="94" text-anchor="middle">Vega</text>
+                <text x="91" y="236">Sheliak</text>
+                <text x="38" y="258">Sulafat</text>
+            </svg>
+            <figcaption>α Lyr · 25 anos-luz</figcaption>
+        </figure>
+    </div>
     <div class="perfis" role="group" aria-label="Perfis prontos">
         @foreach (var perfil in Perfis.Todos)
         {

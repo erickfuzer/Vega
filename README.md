@@ -2,14 +2,14 @@
 
 # 💫 Vega
 
-Monte a sua instalação do Windows sem perder tempo com o que não usa. Todas as opções **organizadas**, com o custo de cada uma, e um `autounattend.xml` pronto para baixar. Tudo roda no seu navegador.
+**Windows, sem os brindes.** Marque o que fica e o que sai, com todas as opções **organizadas** e o custo de cada uma, e baixe um `autounattend.xml` que deixa a instalação no automático. Tudo roda no seu navegador.
 
 ![C#](https://img.shields.io/badge/C%23-239120?style=for-the-badge)
 ![.NET 10](https://img.shields.io/badge/.NET_10-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
 ![Blazor](https://img.shields.io/badge/Blazor_WebAssembly-512BD4?style=for-the-badge&logo=blazor&logoColor=white)
 ![GitHub Pages](https://img.shields.io/badge/GitHub_Pages-222222?style=for-the-badge&logo=githubpages&logoColor=white)
 
-<img src="docs/screenshot.jpg" alt="Vega no tema grafite, com os três perfis prontos, as categorias na lateral e as opções de segurança, cada uma com o seu aviso" width="760">
+<img src="docs/screenshot.jpg" alt="Vega no tema grafite: o título Windows, sem os brindes, a constelação de Lira ao lado, os três perfis prontos e as categorias na lateral" width="760">
 <br><br>
 
 [![Abrir o site](https://img.shields.io/badge/▶_Abrir_o_site-3F5F8F?style=for-the-badge)](https://erickfuzer.github.io/Vega/)
