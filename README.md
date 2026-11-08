@@ -17,7 +17,7 @@
 </div>
 
 > [!NOTE]
-> O Vega está no começo, e os perfis ainda não passaram por uma instalação real, como explica [Limitações](#limitações). Teste o arquivo gerado em uma máquina virtual antes de usar em um computador de verdade, e relate o que encontrar em [Issues](https://github.com/erickfuzer/Vega/issues).
+> O Vega está no começo. Os perfis Uso diário e Remoção máxima já instalaram o Windows do começo ao fim em uma máquina virtual, mas ainda não em um computador de verdade, como explica [Limitações](#limitações). Teste o arquivo gerado em uma máquina virtual antes de usar no seu computador, e relate o que encontrar em [Issues](https://github.com/erickfuzer/Vega/issues).
 
 ## Funcionalidades
 
@@ -45,7 +45,7 @@
 - O motor é o [unattend-generator](https://github.com/cschneegans/unattend-generator), de Christoph Schneegans, incluído como submódulo. Ele monta o XML e o valida contra o esquema do Windows, e o Vega cuida da organização e da interface.
 - Os testes comparam o catálogo com o motor e **falham se o gerador ganhar uma opção de ligar e desligar ou um item removível que o site ainda não mostra**. Cada opção e cada perfil também precisam gerar um XML válido.
 - Abrindo no Vega um XML baixado do gerador original e gerando de novo, o arquivo sai igual ao original, tirando o comentário do topo. Essa comparação foi feita com um arquivo real, de uma combinação de opções, e é o único caso comparado com a saída do site.
-- O motor tem um bug no modo script: quando o disco e a imagem são perguntados na hora, o script ganha dois rótulos iguais, e Enter em branco na pergunta da imagem volta para a pergunta do disco e formata de novo. O Vega corrige isso no XML gerado.
+- O motor tem um bug no modo script: quando o disco e a imagem são perguntados na hora, o script ganha dois rótulos iguais, e Enter em branco na pergunta da imagem volta para a pergunta do disco. O Vega corrige isso no XML gerado, e a correção foi conferida no WinPE de uma instalação na máquina virtual.
 
 ## Como usar
 
@@ -75,11 +75,12 @@ dotnet test tests/Vega.Tests
 
 ## Limitações
 
-- **Ainda não testado em uma instalação real:** os testes confirmam que o XML é válido e que o script do modo script pergunta e pausa antes de apagar, mas os perfis do Vega ainda não passaram por uma instalação do começo ao fim.
+- **Testado só em máquina virtual:** em 8 de novembro de 2026, o Uso diário, no modo normal, e a Remoção máxima, no modo script, instalaram o Windows 11 26H2 do começo ao fim no VirtualBox, e cada um entregou o que promete. Ainda falta um computador de verdade, com Wi-Fi, bateria e drivers.
 - **Escolha de disco:** no modo script, o pendrive também aparece na lista e não é recusado. Confira o disco pelo tamanho.
-- **Defender:** no modo script, alguns serviços de monitoramento podem continuar rodando. Isso foi visto em um teste, com o mesmo método de desligamento.
+- **Defender:** no modo script, a proteção desliga, mas alguns serviços de monitoramento continuam rodando. Isso apareceu também no teste da Remoção máxima.
+- **Pausa do Windows Update:** só começa no segundo boot. No primeiro login, o Update ainda está ligado.
 - **Abrir XML:** só funciona com arquivos que trazem as opções no comentário do topo, como os do Vega e os do gerador original. O XML do Vega reabre sem senhas nem chaves.
-- **Remover o Edge:** o script segue o método que funcionou em um notebook real, mas ainda não rodou a partir de um XML do Vega. O ícone pode continuar na barra por um tempo, e links do Windows feitos só para o Edge podem parar de funcionar.
+- **Remover o Edge:** no teste da máquina virtual, o Edge saiu e o WebView2 ficou. O atalho fixado na barra de tarefas continua lá, com um ícone genérico, e links do Windows feitos só para o Edge podem parar de funcionar.
 - **Plano de energia:** alguns notebooks não têm Alto Desempenho nem Desempenho Máximo e continuam em Equilibrado.
 - **Senhas no arquivo:** senhas, chaves e o Wi-Fi digitados ficam no XML e na configuração salva. Não compartilhe esses arquivos se usar dados reais.
 - **Download inicial:** o .NET vem junto com a página, cerca de 11 MB antes da compactação. As visitas seguintes usam o cache do navegador.

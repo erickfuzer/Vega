@@ -94,7 +94,7 @@ public static class Catalogo
         new(nameof(Configuration.DisableWindowsUpdate), Categoria.Seguranca, "Pausar o Windows Update",
             "Cria uma tarefa que tenta renovar a pausa de 7 dias a cada boot e todo dia.",
             (c, v) => c with { DisableWindowsUpdate = v },
-            Aviso.Risco, "Fica sem correções de segurança e sem drivers automáticos. Não conte com a pausa: em um notebook real, uma pausa feita só pelo registro sumiu sozinha."),
+            Aviso.Risco, "Fica sem correções de segurança e sem drivers automáticos. A pausa só começa no segundo boot: no primeiro login, o Update ainda está ligado. Não conte com ela: em um notebook real, uma pausa feita só pelo registro sumiu sozinha."),
         new(nameof(Configuration.PreventAutomaticReboot), Categoria.Seguranca, "Não reiniciar sozinho após atualizar",
             "Define políticas contra reiniciar com alguém conectado e move as horas ativas a cada 4 horas.",
             (c, v) => c with { PreventAutomaticReboot = v },
