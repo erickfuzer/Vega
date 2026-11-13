@@ -73,6 +73,8 @@ Para rodar os testes:
 dotnet test tests/Vega.Tests
 ```
 
+Para conferir os XMLs sem instalar e para instalar numa máquina virtual, veja o [kit de teste](ferramentas/teste-vm/LEIA-ME.md). O [AGENTS.md](AGENTS.md) reúne a arquitetura, as decisões e o que as instalações ensinaram, para quem for continuar o projeto.
+
 ## Limitações
 
 - **Testado só em máquina virtual:** em 8 de novembro de 2026, o Uso diário, no modo normal, e a Remoção máxima, no modo script, instalaram o Windows 11 26H2 do começo ao fim no VirtualBox, e cada um entregou o que promete. Ainda falta um computador de verdade, com Wi-Fi, bateria e drivers.
@@ -94,8 +96,10 @@ Vega/
 │   └── Vega.Web/               # interface em Blazor WebAssembly
 ├── tests/Vega.Tests/           # confere o catálogo contra o motor e gera os XMLs
 ├── vendor/unattend-generator/  # motor original, como submódulo
+├── ferramentas/teste-vm/       # conferência dos XMLs e instalação em máquina virtual
 ├── docs/                       # prints do README
 ├── .github/workflows/          # publicação no GitHub Pages
+├── AGENTS.md                   # guia para continuar o projeto
 ├── Vega.slnx
 ├── LICENSE
 └── README.md

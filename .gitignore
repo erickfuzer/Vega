@@ -484,7 +484,11 @@ $RECYCLE.BIN/
 # Saida local de publicacao
 artifacts/
 
-# Instrucoes e configuracao locais do Claude Code
-CLAUDE.md
+# Configuracao local do Claude Code
 .claude/
+
+# Saidas do kit de teste em VM: XMLs gerados, prints e coletas das maquinas
+ferramentas/teste-vm/xml/
+ferramentas/teste-vm/prints/
+ferramentas/teste-vm/recebidos/
 
